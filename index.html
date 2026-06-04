@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ticket Annotator — L3 Customer Response</title>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <title>Response Annotator — L3 Customer-Facing Responses</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -14,34 +15,171 @@
       background: #f6f8fa;
       color: #1f2328;
       min-height: 100vh;
-      padding: 32px 24px;
+      padding: 32px 16px;
+      box-sizing: border-box;
     }
 
-    .app { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .app { width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: row; align-items: flex-start; }
+
+    .sidebar {
+      width: 148px; flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 2px;
+      padding: 0 10px 32px 0;
+      position: sticky; top: 32px;
+    }
+    .sidebar-header {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #94a3b8;
+      padding: 2px 12px 10px 12px;
+      white-space: nowrap;
+    }
+    .sidebar-stage {
+      cursor: pointer; display: flex; align-items: center; gap: 8px;
+      padding: 7px 12px; border: none; background: transparent;
+      border-radius: 6px; text-align: left; width: 100%;
+      transition: background 0.12s; border-left: 3px solid transparent;
+    }
+    .sidebar-stage:hover { background: #f1f5f9; }
+    .sidebar-stage.active { background: #fff7ed; border-left-color: #d97706; }
+    .sidebar-num {
+      width: 22px; height: 22px; border-radius: 999px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0;
+      background: #e2e8f0; color: #64748b;
+      transition: background 0.12s, color 0.12s;
+    }
+    .sidebar-stage.active .sidebar-num { background: #d97706; color: #fff; }
+    .sidebar-label {
+      font-size: 12px; font-weight: 500; color: #64748b; line-height: 1.3;
+      white-space: nowrap;
+    }
+    .sidebar-stage.active .sidebar-label { color: #92400e; font-weight: 600; }
+
+    .prep-panel {
+      border: 1.5px solid #d97706; border-radius: 10px;
+      background: #fffbeb; padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .prep-panel-title { font-size: 14px; font-weight: 700; color: #92400e; }
+    .prep-hint { font-size: 12px; color: #78350f; line-height: 1.5; }
+    .prep-block { display: flex; flex-direction: column; gap: 8px; }
+    .prep-block-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
+      text-transform: uppercase; color: #b45309;
+    }
+    .prep-copy-btn {
+      cursor: pointer; background: #d97706; color: #fff;
+      border: none; border-radius: 6px;
+      padding: 5px 14px; font-size: 11px; font-weight: 700;
+      align-self: flex-start; transition: background 0.15s;
+    }
+    .prep-copy-btn:hover { background: #b45309; }
+
+    .main {
+      flex: 1; min-width: 0; padding-left: 20px;
+      border-left: 1px solid #e2e8f0;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+
+    .checklist {
+      display: flex; flex-direction: column; gap: 5px;
+      padding: 10px 14px;
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+    }
+    .checklist-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: #94a3b8; margin-bottom: 2px;
+    }
+    .checklist-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 12px; color: #475569; line-height: 1.5;
+    }
+    .checklist-dot {
+      width: 5px; height: 5px; border-radius: 999px;
+      background: #cbd5e1; flex-shrink: 0; margin-top: 6px;
+    }
+    .hint-toggle { margin-top: 0; }
+    .hint-toggle summary {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 12px; color: #475569; line-height: 1.5;
+      list-style: none; cursor: pointer;
+      padding: 2px 0; border-radius: 5px;
+    }
+    .hint-toggle summary::-webkit-details-marker { display: none; }
+    .hint-toggle summary:hover .hint-icon { opacity: 1; }
+    .hint-icon {
+      flex-shrink: 0; margin-left: auto; opacity: 0.35;
+      transition: opacity 0.15s; padding: 2px 4px;
+      border-radius: 4px; margin-top: 2px;
+    }
+    .hint-toggle[open] summary .hint-icon { opacity: 1; color: #d97706; }
+    .hint-toggle[open] summary .hint-icon svg { stroke: #d97706; }
+    .hint-visual {
+      margin-top: 5px; padding: 8px 10px;
+      background: #f8fafc; border: 1px solid #e2e8f0;
+      border-left: 3px solid #fcd34d; border-radius: 0 6px 6px 0;
+    }
+
+    .attach-section { display: flex; flex-direction: column; gap: 6px; }
+    .attach-section-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: #94a3b8;
+    }
+    .attach-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .attach-item {
+      flex: 1; min-width: 220px;
+      border: 1px solid #d0d7de; border-radius: 8px;
+      background: #fff; overflow: hidden;
+    }
+    .attach-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 10px; background: #f1f5f9;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .attach-filename {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 11px; font-weight: 600; color: #1f2328;
+    }
+    .attach-tag {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.05em;
+      text-transform: uppercase; padding: 1px 6px; border-radius: 999px;
+    }
+    .attach-dl-btn {
+      cursor: pointer; background: #1f2328; color: #fff;
+      border: none; border-radius: 4px;
+      padding: 3px 10px; font-size: 10px; font-weight: 700;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
+      transition: background 0.12s;
+    }
+    .attach-dl-btn:hover { background: #32383f; }
+    .attach-desc { font-size: 11px; color: #64748b; padding: 8px 10px; line-height: 1.4; }
     .row { display: flex; flex-direction: row; align-items: center; }
     .wrap { flex-wrap: wrap; }
     .spacer { flex: 1; }
     hr.divider { border: none; border-top: 1px solid #d0d7de; }
 
-    /* Pills */
     .pill {
       display: inline-flex; align-items: center;
       padding: 3px 10px; border-radius: 999px;
       font-size: 12px; font-weight: 500; line-height: 1;
-      white-space: nowrap; user-select: none;
+      white-space: nowrap;
     }
-    .pill-info    { background: #dbeafe; color: #1d4ed8; }
+    .pill-info { background: #dbeafe; color: #1d4ed8; }
     .pill-success { background: #dcfce7; color: #15803d; }
     .pill-warning { background: #fef9c3; color: #854d0e; }
-    .pill-danger  { background: #fee2e2; color: #b91c1c; }
+    .pill-danger { background: #fee2e2; color: #b91c1c; }
     .pill-neutral { background: #f1f5f9; color: #475569; }
-    .pill-purple  { background: #ede9fe; color: #6d28d9; }
+    .pill-purple { background: #ede9fe; color: #6d28d9; }
+    .pill-teal { background: #ccfbf1; color: #0f766e; }
+    .pill-indigo { background: #e0e7ff; color: #3730a3; }
+    .pill-orange { background: #ffedd5; color: #c2410c; }
+    .pill-pink { background: #fce7f3; color: #9d174d; }
+    .pill-amber { background: #fef3c7; color: #92400e; }
 
     .pill-drag { cursor: grab; border-radius: 999px; transition: opacity 0.1s; }
     .pill-drag:active { cursor: grabbing; }
     .pill-drag.dragging { opacity: 0.3; }
 
-    /* Buttons */
     .btn {
       cursor: pointer; border-radius: 6px; padding: 6px 14px;
       font-size: 13px; font-weight: 500; border: none;
@@ -55,7 +193,6 @@
     }
     .btn-ghost:hover { background: #f1f5f9; }
 
-    /* Paste area */
     .paste-area {
       width: 100%; min-height: 140px; resize: vertical;
       padding: 12px 14px; border-radius: 8px;
@@ -63,36 +200,25 @@
       font-family: inherit; font-size: 13px; line-height: 1.7;
       color: #1f2328; outline: none;
     }
-    .paste-area:focus { border-color: #6d28d9; }
+    .paste-area:focus { border-color: #d97706; }
 
-    /* Section label */
     .section-label { font-size: 13px; font-weight: 600; color: #1f2328; }
 
-    /* Page header */
-    .page-header {
-      display: flex; align-items: center; gap: 10px;
-      padding-bottom: 4px;
-    }
-    .page-title { font-size: 15px; font-weight: 700; color: #1f2328; }
-    .page-badge {
-      font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
-      text-transform: uppercase; padding: 3px 10px; border-radius: 999px;
-      background: #ede9fe; color: #6d28d9;
-    }
-
-    /* Message line drop zones */
     .msg-line {
       padding: 10px 14px; border-radius: 6px;
       border: 1.5px solid transparent;
       transition: background 0.12s, border-color 0.12s;
     }
-    .msg-line.drag-over    { border-color: #6d28d9; background: rgba(109,40,217,0.05); }
-    .msg-line.has-info     { background: rgba(37,99,235,0.08); }
-    .msg-line.has-success  { background: rgba(21,128,61,0.10); }
-    .msg-line.has-warning  { background: rgba(133,77,14,0.08); }
-    .msg-line.has-danger   { background: rgba(185,28,28,0.08); }
-    .msg-line.has-neutral  { background: #f1f5f9; }
-    .msg-line.has-purple   { background: rgba(109,40,217,0.07); }
+    .msg-line.drag-over { border-color: #d97706; background: rgba(217,119,6,0.05); }
+    .msg-line.has-info { background: rgba(37,99,235,0.08); }
+    .msg-line.has-success { background: rgba(21,128,61,0.10); }
+    .msg-line.has-warning { background: rgba(133,77,14,0.08); }
+    .msg-line.has-danger { background: rgba(185,28,28,0.08); }
+    .msg-line.has-neutral { background: #f1f5f9; }
+    .msg-line.has-purple { background: rgba(109,40,217,0.07); }
+    .msg-line.has-orange { background: rgba(194,65,12,0.07); }
+    .msg-line.has-pink { background: rgba(157,23,77,0.07); }
+    .msg-line.has-amber { background: rgba(217,119,6,0.07); }
 
     .text-sm { font-size: 13px; line-height: 1.7; }
 
@@ -100,8 +226,17 @@
       font-family: "SFMono-Regular", Consolas, monospace;
       font-size: 11px; background: #f1f5f9;
       border: 1px solid #e2e8f0; border-radius: 4px;
-      padding: 1px 5px; color: #6d28d9;
+      padding: 1px 5px; color: #d97706;
     }
+
+    .config-block {
+      margin: 6px 0 2px; padding: 10px 14px;
+      border-radius: 6px; background: #f0f2f5;
+      border: 1px solid #e2e8f0;
+    }
+    .config-row { font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; line-height: 1.8; }
+    .config-key { color: #d97706; font-weight: 600; }
+    .config-val { color: #475569; }
 
     .tags-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
     .tag-chip { cursor: pointer; }
@@ -120,64 +255,59 @@
     }
     .toggle-btn:hover { opacity: 1; }
 
-    /* Prompt output panel */
+    .mode-bar {
+      display: flex; align-items: center; gap: 6px;
+      background: #f1f5f9; border-radius: 999px;
+      padding: 3px; width: fit-content;
+    }
+    .mode-btn {
+      cursor: pointer; border: none; border-radius: 999px;
+      padding: 4px 16px; font-size: 12px; font-weight: 600;
+      transition: background 0.15s, color 0.15s;
+      background: transparent; color: #64748b;
+    }
+    .mode-btn.active { background: #1f2328; color: #fff; }
+    .mode-btn:not(.active):hover { background: #e2e8f0; }
+
     .prompt-panel {
-      border: 1.5px solid #6d28d9; border-radius: 8px;
-      background: #faf5ff; padding: 14px 16px;
+      border: 1.5px solid #d97706; border-radius: 8px;
+      background: #fffbeb; padding: 14px 16px;
       display: flex; flex-direction: column; gap: 10px;
     }
     .prompt-panel-header { display: flex; align-items: center; gap: 8px; }
-    .prompt-panel-title { font-size: 13px; font-weight: 600; color: #6d28d9; }
+    .prompt-panel-title { font-size: 13px; font-weight: 600; color: #92400e; }
     .prompt-output {
       font-family: "SFMono-Regular", Consolas, monospace;
       font-size: 12px; line-height: 1.7; white-space: pre-wrap;
-      background: #fff; border: 1px solid #ddd6fe; border-radius: 6px;
+      background: #fff; border: 1px solid #fde68a; border-radius: 6px;
       padding: 12px 14px; color: #1f2328;
     }
 
-    /* Stage buttons */
-    .stage-bar { display: flex; flex-wrap: wrap; gap: 6px; }
-    .stage-btn {
-      cursor: pointer;
-      display: flex; align-items: center; gap: 6px;
-      padding: 7px 14px; border-radius: 8px;
-      font-size: 13px; font-weight: 500;
-      border: 1.5px solid #d0d7de;
-      background: #fff; color: #475569;
-      transition: all 0.15s; user-select: none;
-    }
-    .stage-btn:hover { border-color: #94a3b8; color: #1f2328; background: #f8fafc; }
-    .stage-btn.active { border-color: #6d28d9; background: #6d28d9; color: #fff; }
-    .stage-num {
-      width: 18px; height: 18px; border-radius: 999px;
-      display: inline-flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: 700; flex-shrink: 0;
-      background: #e2e8f0; color: #64748b;
-      transition: background 0.15s, color 0.15s;
-    }
-    .stage-btn.active .stage-num { background: rgba(255,255,255,0.25); color: #fff; }
-
-    /* Stage panel */
     .stage-panel {
-      overflow: hidden; max-height: 0;
+      overflow: hidden;
+      max-height: 0;
       transition: max-height 0.28s ease, opacity 0.22s ease;
       opacity: 0;
     }
     .stage-panel.open { max-height: 2000px; opacity: 1; }
+
     .stage-panel-inner {
-      border-radius: 10px; border: 1.5px solid #d0d7de;
-      background: #fff; padding: 14px 16px;
+      border-radius: 10px;
+      border: 1.5px solid #d0d7de;
+      background: #fff;
+      padding: 14px 16px;
       display: flex; flex-direction: column; gap: 10px;
     }
     .stage-title { font-size: 14px; font-weight: 700; color: #1f2328; }
 
-    /* Stage prompt block */
     .stage-prompt-wrap { position: relative; }
     .stage-prompt {
       font-family: "SFMono-Regular", Consolas, monospace;
       font-size: 11.5px; line-height: 1.7; white-space: pre-wrap;
-      background: #f6f8fa; border: 1px solid #d0d7de;
-      border-radius: 6px; padding: 12px 14px; color: #1f2328;
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px; padding: 12px 14px;
+      color: #1f2328;
     }
     .stage-copy-btn {
       position: absolute; top: 8px; right: 8px;
@@ -187,47 +317,301 @@
       color: #475569; transition: background 0.15s;
     }
     .stage-copy-btn:hover { background: #f1f5f9; }
-    .prompt-version-label {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
-      text-transform: uppercase; color: #94a3b8;
-      margin: 10px 0 4px 0;
-    }
+
     .light-details { margin: 8px 0 4px 0; }
     .light-summary {
       font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
       text-transform: uppercase; color: #94a3b8;
-      cursor: pointer; user-select: none;
-      list-style: none; display: flex; align-items: center; gap: 6px;
+      cursor: pointer;
+      list-style: none;
+      display: flex; align-items: center; gap: 6px;
     }
     .light-summary::-webkit-details-marker { display: none; }
     .light-summary::before { content: "▶"; font-size: 9px; transition: transform 0.15s; }
     details[open] .light-summary::before { transform: rotate(90deg); }
     .light-hint { font-weight: 400; color: #cbd5e1; text-transform: none; letter-spacing: 0; }
 
-    /* Pillar header colors */
     .pillar { font-weight: 700; }
-    .pillar-CONTEXT      { color: #2563eb; }
+    .pillar-CONTEXT { color: #2563eb; }
     .pillar-INSTRUCTIONS { color: #15803d; }
-    .pillar-REASONING    { color: #c2410c; }
-    .pillar-EXAMPLES     { color: #6d28d9; }
+    .pillar-REASONING { color: #c2410c; }
+    .pillar-EXAMPLES { color: #6d28d9; }
     .pillar-OUTPUT_FORMAT { color: #0f766e; }
-    .pillar-OUTPUT       { color: #0f766e; }
+
+    .signal-risk-table {
+      width: 100%; border-collapse: collapse; font-size: 12px;
+    }
+    .signal-risk-table th {
+      text-align: left; padding: 4px 8px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: #94a3b8;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .signal-risk-table td {
+      padding: 5px 8px; border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
   </style>
 </head>
 <body>
-<div id="root"></div>
+  <div id="root"></div>
+  <script type="text/babel">
+    window.react = window.React;
+    const { useState, useEffect, useRef } = React;
 
-<script type="text/babel">
-const { useState } = React;
+    const Ic = ({ n, size=13, color, style }) => {
+      const C = LucideReact[n];
+      return C ? <C size={size} color={color} style={style} strokeWidth={2} /> : null;
+    };
 
-/* ── Stages ────────────────────────────────────────────── */
-const STAGES = [
-  {
-    id: "evaluate", label: "Evaluate", alias: ";p_s_l3_1",
-    color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe",
-    promptLight: `Read the customer message above.
+    /* ── Signal detection visual ─────────────────────────── */
+    function EvaluateVisual() {
+      const signals = [
+        {label:'Escalation Signal', color:'#6d28d9', risk:'High'},
+        {label:'Business Impact',   color:'#c2410c', risk:'High'},
+        {label:'Urgency',           color:'#b45309', risk:'Med'},
+        {label:'Unmet Expectation', color:'#9d174d', risk:'Med'},
+        {label:'Sentiment',         color:'#b91c1c', risk:'Med'},
+        {label:'Context',           color:'#475569', risk:'Low'},
+        {label:'Request',           color:'#1d4ed8', risk:'Low'},
+      ];
+      return (
+        <div style={{display:'flex',alignItems:'stretch',gap:12,padding:'12px 0',fontSize:12}}>
+          {/* Left — annotated message */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:4}}>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:'#94a3b8',marginBottom:4}}>CUSTOMER MESSAGE</div>
+            {[['…our monitoring is completely broken','#fee2e2','#b91c1c'],
+              ['VP of Engineering is asking daily','#ede9fe','#6d28d9'],
+              ['fix was promised, nothing changed','#fce7f3','#9d174d'],
+              ['production incidents are impacted','#ffedd5','#c2410c'],
+              ['we need a timeline today','#fef9c3','#92400e']
+            ].map(([text,bg,tc],i)=>(
+              <div key={i} style={{background:bg,borderRadius:5,padding:'3px 8px',fontSize:11,color:tc,fontStyle:'italic'}}>
+                "{text}"
+              </div>
+            ))}
+          </div>
+          {/* Arrow */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,minWidth:60}}>
+            <div style={{fontSize:10,fontWeight:700,color:'#d97706',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>→ EVALUATE</div>
+          </div>
+          {/* Right — risk panel */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:4}}>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:'#94a3b8',marginBottom:4}}>RISK ASSESSMENT</div>
+            {signals.map((s,i)=>(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:6}}>
+                <div style={{width:8,height:8,borderRadius:2,background:s.color,flexShrink:0}} />
+                <div style={{flex:1,fontSize:11,color:'#475569'}}>{s.label}</div>
+                <div style={{
+                  fontSize:9,fontWeight:700,padding:'1px 6px',borderRadius:999,
+                  background:s.risk==='High'?'#fee2e2':s.risk==='Med'?'#fef9c3':'#f1f5f9',
+                  color:s.risk==='High'?'#b91c1c':s.risk==='Med'?'#92400e':'#64748b'
+                }}>{s.risk}</div>
+              </div>
+            ))}
+            <div style={{marginTop:6,padding:'4px 8px',borderRadius:6,background:'#fee2e2',border:'1px solid #fca5a5'}}>
+              <span style={{fontSize:10,fontWeight:700,color:'#b91c1c'}}>Risk: HIGH · Escalation Signal detected</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function DraftVisual() {
+      const moves = [
+        {signal:'Escalation Signal', move:'Name the path explicitly', color:'#6d28d9', bg:'#ede9fe'},
+        {signal:'Business Impact',   move:'Confirm impact + priority', color:'#c2410c', bg:'#ffedd5'},
+        {signal:'Urgency',           move:'Concrete timeline (date)', color:'#92400e', bg:'#fef9c3'},
+        {signal:'Unmet Expectation', move:'Own the gap directly',      color:'#9d174d', bg:'#fce7f3'},
+        {signal:'Sentiment',         move:'Empathy before technical',  color:'#b91c1c', bg:'#fee2e2'},
+      ];
+      return (
+        <div style={{display:'flex',alignItems:'stretch',gap:12,padding:'12px 0',fontSize:12}}>
+          {/* Left — signal priority */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:4}}>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:'#94a3b8',marginBottom:4}}>SIGNALS (priority order)</div>
+            {moves.map((m,i)=>(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:6,padding:'3px 6px',borderRadius:5,background:m.bg}}>
+                <div style={{fontSize:10,fontWeight:700,color:'#94a3b8',width:14}}>{i+1}</div>
+                <div style={{fontSize:11,color:m.color,fontWeight:600}}>{m.signal}</div>
+              </div>
+            ))}
+          </div>
+          {/* Arrow */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,minWidth:60}}>
+            <div style={{fontSize:10,fontWeight:700,color:'#15803d',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>→ DRAFT</div>
+          </div>
+          {/* Right — response structure */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:4}}>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:'#94a3b8',marginBottom:4}}>RESPONSE STRUCTURE</div>
+            {moves.map((m,i)=>(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:6,borderLeft:`3px solid ${m.color}`,paddingLeft:8}}>
+                <div style={{fontSize:11,color:'#475569'}}>{m.move}</div>
+              </div>
+            ))}
+            <div style={{marginTop:6,padding:'4px 8px',borderRadius:6,background:'#f0fdf4',border:'1px solid #86efac',fontSize:10}}>
+              <span style={{fontWeight:700,color:'#15803d'}}>No filler · Concrete commitments · Empathy first</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function CriticizeVisual() {
+      const coverage = [
+        {signal:'Escalation Signal', status:'Addressed', color:'#15803d', bg:'#dcfce7'},
+        {signal:'Business Impact',   status:'Addressed', color:'#15803d', bg:'#dcfce7'},
+        {signal:'Urgency',           status:'Partial',   color:'#92400e', bg:'#fef9c3'},
+        {signal:'Unmet Expectation', status:'Missing',   color:'#b91c1c', bg:'#fee2e2'},
+        {signal:'Sentiment',         status:'Addressed', color:'#15803d', bg:'#dcfce7'},
+      ];
+      return (
+        <div style={{display:'flex',alignItems:'stretch',gap:12,padding:'12px 0',fontSize:12}}>
+          {/* Left — draft */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:4}}>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:'#94a3b8',marginBottom:4}}>DRAFT</div>
+            {[82,65,88,54,76,70].map((w,i)=>(
+              <div key={i} style={{height:8,borderRadius:2,background:'#e2e8f0',width:`${w}%`}} />
+            ))}
+            <div style={{marginTop:4,padding:'3px 8px',borderRadius:5,background:'#fef9c3',border:'1px solid #fde68a',fontSize:10,color:'#92400e',fontStyle:'italic'}}>
+              "as per my previous email" ← filler detected
+            </div>
+          </div>
+          {/* Arrow */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,minWidth:60}}>
+            <div style={{fontSize:10,fontWeight:700,color:'#6d28d9',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>→ CRITICIZE</div>
+          </div>
+          {/* Right — coverage */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:4}}>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:'#94a3b8',marginBottom:4}}>SIGNAL COVERAGE</div>
+            {coverage.map((c,i)=>(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:6,padding:'2px 6px',borderRadius:4,background:c.bg}}>
+                <div style={{fontSize:11,flex:1,color:'#1f2328'}}>{c.signal}</div>
+                <div style={{fontSize:9,fontWeight:700,color:c.color}}>{c.status}</div>
+              </div>
+            ))}
+            <div style={{marginTop:6,padding:'4px 8px',borderRadius:6,background:'#fee2e2',border:'1px solid #fca5a5',fontSize:10}}>
+              <span style={{fontWeight:700,color:'#b91c1c'}}>Best edit: close Unmet Expectation gap first</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const STAGE_VISUALS = {
+      evaluate: { color:'#d97706', icon:'ScanSearch',
+        concept: 'Detect all signals before rating risk. Anti-anchoring rule: scan the full message first.',
+        graphic: EvaluateVisual },
+      draft:    { color:'#15803d', icon:'PenLine',
+        concept: 'Map each signal to a required response move. Order by priority, not by message order.',
+        graphic: DraftVisual },
+      criticize:{ color:'#6d28d9', icon:'ShieldCheck',
+        concept: 'Signal coverage first, filler phrases second. The best edit closes the largest gap.',
+        graphic: CriticizeVisual },
+    };
+
+    /* ── Visual hint mini-components ─────────────────────── */
+    const HV = {
+      Contrast: ({bad, good}) => (
+        <div style={{display:'flex',flexDirection:'column',gap:4,fontSize:12}}>
+          <div style={{color:'#b91c1c'}}>✗ {bad}</div>
+          <div style={{color:'#15803d'}}>✓ {good}</div>
+        </div>
+      ),
+      Table: ({rows, cols}) => (
+        <table style={{fontSize:11,borderCollapse:'collapse',width:'100%'}}>
+          {cols && <thead><tr>{cols.map((c,i)=><th key={i} style={{textAlign:'left',padding:'2px 6px',color:'#94a3b8',fontWeight:700,fontSize:10}}>{c}</th>)}</tr></thead>}
+          <tbody>{rows.map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j} style={{padding:'2px 6px',color:'#475569'}}>{cell}</td>)}</tr>)}</tbody>
+        </table>
+      ),
+      Priority: ({rows}) => (
+        <div style={{display:'flex',flexDirection:'column',gap:3}}>
+          {rows.map(([n,signal,color],i)=>(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:6,fontSize:11}}>
+              <span style={{width:16,fontWeight:700,color:'#94a3b8'}}>{n}</span>
+              <span style={{color}}>{signal}</span>
+            </div>
+          ))}
+        </div>
+      ),
+    };
+
+    const STAGE_VISUAL_HINTS = {
+      evaluate: [
+        () => <HV.Contrast
+          bad="Anchor on the most obvious signal immediately"
+          good="List ALL signals present before assigning a dominant one" />,
+        () => <HV.Priority rows={[
+          ['1','Escalation Signal','#6d28d9'],
+          ['2','Business Impact','#c2410c'],
+          ['3','Urgency','#b45309'],
+          ['4','Unmet Expectation','#9d174d'],
+          ['5','Negative Sentiment','#b91c1c'],
+        ]} />,
+        () => <HV.Table cols={['Risk','Criteria']} rows={[
+          ['High','Escalation Signal present, OR Business Impact + Urgency together'],
+          ['Medium','Unmet Expectation, OR Urgency without Business Impact'],
+          ['Low','Sentiment only, OR Context/Request with no urgency signals'],
+        ]} />,
+        () => <HV.Contrast
+          bad="\"I'll look into this\" (vague, no action)"
+          good="\"Yes — I am looping in [AE name] on this thread now\" (named, immediate)" />,
+      ],
+      draft: [
+        () => <HV.Table cols={['Signal','Required move']} rows={[
+          ['Escalation Signal','Name the path explicitly — do not soften it'],
+          ['Business Impact','Confirm understanding + state priority level'],
+          ['Urgency','Concrete timeline — date or time window, never "soon"'],
+          ['Unmet Expectation','Own the gap directly — no deflection'],
+          ['Sentiment','Empathy before any technical content'],
+        ]} />,
+        () => <HV.Contrast
+          bad="\"We will resolve this as soon as possible\""
+          good="\"I will send you an update by Thursday 17:00 CET with a resolution timeline\"" />,
+        () => <HV.Table cols={['Filler phrase','Why it fails']} rows={[
+          ['"I hope this finds you well"','Ignores visible urgency'],
+          ['"As per my previous email"','Deflects — makes the customer feel blamed'],
+          ['"Please don\'t hesitate to reach out"','Vague — no concrete action offered'],
+          ['"I understand your frustration"','Empathy theater if not followed by action'],
+        ]} />,
+        () => <HV.Contrast
+          bad="\"We are looking into this\" (no timeline)"
+          good="\"I am escalating this to our team and will reply with findings by EOD tomorrow\"" />,
+      ],
+      criticize: [
+        () => <HV.Contrast
+          bad="Fix phrasing first (cosmetic)"
+          good="Check signal coverage first — a gap is worse than a filler phrase" />,
+        () => <HV.Contrast
+          bad="Opening: \"Thank you for reaching out. I'll investigate the APM issue...\""
+          good="Opening: \"I understand how disruptive this is — let me address each point directly.\"" />,
+        () => <HV.Table cols={['Pattern','Replacement']} rows={[
+          ['"As per my previous email"','"As I mentioned on [date],"'],
+          ['"Please don\'t hesitate"','"Reply here and I\'ll respond within [time]"'],
+          ['"ASAP"','"by [concrete date/time]"'],
+          ['"Looking into it"','"I\'ll have an update by [time]"'],
+        ]} />,
+        () => <HV.Contrast
+          bad="Propose 3 edits at once"
+          good="State the SINGLE edit that closes the largest signal gap" />,
+      ],
+    };
+
+    /* ── Stage definitions ──────────────────────────────── */
+    const L3_STAGES = [
+      {
+        id: "evaluate", label: "Evaluate", stepNum: 4,
+        color: "#d97706", bg: "#fffbeb", border: "#fde68a",
+        goal: "Detect every signal before rating risk. Apply the anti-anchoring rule: read the full message before assigning a dominant signal. A message can carry Urgency without Escalation Signal, or Negative Sentiment without Business Impact.",
+        steps: [
+          "What signals are present in this message — all of them, not just the loudest one?",
+          "Which is the dominant signal, and which signals determined the risk level?",
+          "Does the risk level require stakeholder involvement?",
+          "Would your first impression have missed any signal?",
+        ],
+        promptLight: `Read the customer message above.
 What is the dominant signal? What is the risk level: Low / Medium / High?`,
-    prompt: `CONTEXT:
+        prompt: `CONTEXT:
 You are a Datadog TSE2 evaluating a customer message before writing a response.
 The annotated message above is your input.
 
@@ -241,10 +625,10 @@ EXAMPLES:
 Dominant signal: Escalation Signal
 Reasoning: Customer explicitly mentions involving their AE and references 2 weeks of no progress.
 Risk level: High
-Stakeholder involvement: Yes — customer has stated intent to escalate to their AE.
+Stakeholder involvement: Yes -- customer has stated intent to escalate to their AE.
 
 REASONING:
-Before rating risk, identify every signal present — do not anchor on the most obvious one.
+Before rating risk, identify every signal present -- do not anchor on the most obvious one.
 A message can carry Urgency without Escalation Signal, or Negative Sentiment without Business Impact.
 State each signal you detected before assigning a risk level.
 
@@ -253,13 +637,20 @@ OUTPUT FORMAT:
 - One-sentence reasoning
 - Risk level (Low / Medium / High)
 - Stakeholder decision (only if risk is Medium or High)`,
-  },
-  {
-    id: "draft", label: "Draft", alias: ";p_s_l3_2",
-    color: "#6d28d9", bg: "#faf5ff", border: "#ddd6fe",
-    promptLight: `Write a response to the customer message above.
+      },
+      {
+        id: "draft", label: "Draft", stepNum: 5, audienceExercise: true,
+        color: "#15803d", bg: "#f0fdf4", border: "#86efac",
+        goal: "Map each detected signal to a required response move. Order paragraphs by priority (Escalation > Business Impact > Urgency > Unmet Expectation > Sentiment > Context > Request). Never write 'soon' — give a real time window or the next concrete action.",
+        steps: [
+          "What does the customer need most right now — and how does that shape the tone?",
+          "For each detected signal, what is the required response move?",
+          "Does the opening paragraph lead with empathy if Sentiment or Urgency is dominant?",
+          "Are all commitments concrete — dates or time windows, not 'soon' or 'ASAP'?",
+        ],
+        promptLight: `Write a response to the customer message above.
 Be professional, empathetic, and direct. Address each concern in priority order. No filler phrases.`,
-    prompt: `CONTEXT:
+        prompt: `CONTEXT:
 You are a Datadog TSE2 writing a customer-facing response on behalf of the support team.
 The customer is reaching out via an async support ticket. Your team operates async-first;
 phone/video calls require TL approval. The annotated message and risk assessment from the
@@ -269,7 +660,7 @@ INSTRUCTIONS:
 1. List the key points from the customer message that must be addressed, in priority order.
 2. For each key point, identify the appropriate response action: acknowledge / clarify / commit / redirect.
 3. State your assumption about the customer's current emotional state and how the tone should reflect it.
-4. Draft the response covering all key points — one paragraph per key point.
+4. Draft the response covering all key points -- one paragraph per key point.
 
 EXAMPLES:
 Well-structured key point:
@@ -281,29 +672,36 @@ REASONING:
 Before drafting, state what the customer needs most right now and how that shapes the tone
 of the response.
 
-OUTPUT:
+OUTPUT FORMAT:
 - Key points list (numbered, with action label per point)
 - Response draft (one paragraph per point, professional and empathetic)`,
-  },
-  {
-    id: "criticize", label: "Criticize", alias: ";p_s_l3_3",
-    color: "#c2410c", bg: "#fff7ed", border: "#fed7aa",
-    promptLight: `Review the response draft above.
+      },
+      {
+        id: "criticize", label: "Criticize", stepNum: 6,
+        color: "#6d28d9", bg: "#faf5ff", border: "#ddd6fe",
+        goal: "Check signal coverage first — a draft that misses a signal is worse than one with filler phrases. Opening sentence must lead with empathy if Sentiment or Urgency is dominant. The single most impactful edit closes the largest signal gap.",
+        steps: [
+          "Is every detected signal addressed in the draft?",
+          "Does the opening sentence lead with empathy before technical content (if Sentiment or Urgency is dominant)?",
+          "Are there filler phrases that should be replaced with direct language?",
+          "What is the single most impactful edit — and is it a signal gap or a filler fix?",
+        ],
+        promptLight: `Review the response draft above.
 What signal is missing? Any filler phrases? What is the single best edit?`,
-    prompt: `CONTEXT:
+        prompt: `CONTEXT:
 You are a Datadog TSE2 reviewing a response draft before sending.
 The draft above and the annotated customer message are your inputs.
 
 INSTRUCTIONS:
-1. Check that every signal identified in the annotation is addressed — flag any gap.
+1. Check that every signal identified in the annotation is addressed -- flag any gap.
 2. Scan for filler phrases ("as per", "please don't hesitate", "I hope this finds you well") and suggest direct replacements.
 3. Check the opening sentence: does it lead with empathy before technical content? If the dominant signal was Negative Sentiment or Urgency, it should.
 4. Propose the single most impactful edit to the draft.
 
 EXAMPLES:
 Signal gap: "Escalation Signal detected in annotation but no explicit acknowledgment of escalation path in draft."
-Filler phrase: "Please don't hesitate to reach out" → "Reply here and I will get back to you within [time]."
-Opening sentence: "Opens with technical content — should open with empathy given Negative Sentiment signal."
+Filler phrase: "Please don't hesitate to reach out" -> "Reply here and I will get back to you within [time]."
+Opening sentence: "Opens with technical content -- should open with empathy given Negative Sentiment signal."
 
 REASONING:
 Before proposing any edit, check signal coverage first.
@@ -312,355 +710,651 @@ The single most impactful edit is the one that closes the largest signal gap or 
 
 OUTPUT FORMAT:
 - Signal coverage (addressed / missing per signal)
-- Filler phrases found (original → suggested replacement)
+- Filler phrases found (original -> suggested replacement)
 - Opening sentence verdict
 - One concrete edit`,
-  },
-];
+      },
+    ];
 
-/* ── Signal elements ───────────────────────────────────── */
-const ELEMENTS = [
-  { id: "sentiment",  label: "Sentiment",         tone: "danger" },
-  { id: "unmet",      label: "Unmet Expectation", tone: "warning" },
-  { id: "impact",     label: "Impact",            tone: "danger" },
-  { id: "timeline",   label: "Timeline Pressure", tone: "warning" },
-  { id: "escalation", label: "Escalation Signal", tone: "neutral" },
-  { id: "positive",   label: "Positive Signal",   tone: "success" },
-];
+    /* ── Signal elements ────────────────────────────────── */
+    const ELEMENTS = [
+      { id: "sentiment",        label: "Sentiment",         tone: "danger"  },
+      { id: "urgency",          label: "Urgency",           tone: "warning" },
+      { id: "business_impact",  label: "Business Impact",   tone: "orange"  },
+      { id: "unmet_expectation",label: "Unmet Expectation", tone: "pink"    },
+      { id: "escalation",       label: "Escalation Signal", tone: "purple"  },
+      { id: "context",          label: "Context",           tone: "neutral" },
+      { id: "request",          label: "Request",           tone: "info"    },
+    ];
 
-/* ── Default customer message ──────────────────────────── */
-const DEFAULT_TEXT = `I am extremely disappointed with the level of support we have received. It has been over 2 weeks since we reported that our Datadog dashboards are showing incorrect host counts, and we believe we are being overbilled as a result.
+    const STAGES = L3_STAGES;
 
-Despite multiple follow-ups, we have not received a concrete resolution or even an acknowledgment of the root cause. Our team has provided all requested flares, logs, and configuration details on day one.
-
-The responses we receive are generic and do not reflect that anyone has actually reviewed our data. We asked for a timeline last week and received no answer.
-
-We are a P1 enterprise customer and this level of service is not acceptable. We are now considering escalating this to our account executive.`;
-
-/* ── Pillars ───────────────────────────────────────────── */
-const PILLARS = ["CONTEXT", "INSTRUCTIONS", "REASONING", "EXAMPLES", "OUTPUT FORMAT", "OUTPUT"];
-
-function renderPrompt(text) {
-  return text.split("\n").map((line, i, arr) => {
-    const m = line.match(/^([A-Z][A-Z ]+):$/);
-    if (m && PILLARS.includes(m[1])) {
-      const cls = m[1].replace(/\s+/g, "_");
-      return <span key={i} className={`pillar pillar-${cls}`}>{line}{i < arr.length - 1 ? "\n" : ""}</span>;
+    /* ── Prompt block generator ─────────────────────────── */
+    function lineText(line) {
+      if (line.type === "text") return line.text;
+      if (line.type === "code") return line.rows.join("\n");
+      if (line.type === "intro-code") return line.intro + "\n" + line.rows.join("\n");
+      return "";
     }
-    return <span key={i}>{line}{i < arr.length - 1 ? "\n" : ""}</span>;
-  });
-}
 
-/* ── Text parser ───────────────────────────────────────── */
-const CONFIG_RE = /^[\w]+\s*:/;
-
-function parseText(raw) {
-  const paragraphs = raw.split(/\n{2,}/g).map(p => p.trim()).filter(Boolean);
-  const lines = [];
-  let id = 0;
-  for (const para of paragraphs) {
-    const rows = para.split("\n").map(r => r.trim()).filter(Boolean);
-    if (rows.every(r => CONFIG_RE.test(r))) {
-      lines.push({ id: `l${++id}`, type: "code", rows });
-    } else if (rows.length > 1 && rows.slice(1).every(r => CONFIG_RE.test(r))) {
-      lines.push({ id: `l${++id}`, type: "intro-code", intro: rows[0], rows: rows.slice(1) });
-    } else {
-      lines.push({ id: `l${++id}`, type: "text", text: para.replace(/\n/g, " ") });
+    function generatePromptBlock(lines, tags, elements) {
+      const entries = [];
+      for (const line of lines) {
+        const lineTags = tags[line.id] ?? [];
+        const text = lineText(line);
+        if (lineTags.length === 0) {
+          entries.push({ labels: [], text });
+        } else {
+          const labels = [...new Set(lineTags.map(t => {
+            const el = elements.find(e => e.id === t.elementId);
+            return el ? el.label.toUpperCase() : null;
+          }).filter(Boolean))];
+          entries.push({ labels, text });
+        }
+      }
+      const out = ["## Customer Message (signal-annotated)", ""];
+      for (const { labels, text } of entries) {
+        if (labels.length === 0) {
+          const indent = " ".repeat("[UNLABELED] ".length);
+          out.push(`[UNLABELED] ${text.replace(/\n/g, "\n" + indent)}`);
+        } else {
+          const tag = labels.join(" / ");
+          const indent = " ".repeat(tag.length + 3);
+          out.push(`[${tag}] ${text.replace(/\n/g, "\n" + indent)}`);
+        }
+      }
+      const allLabels = [...new Set(entries.flatMap(e => e.labels))];
+      out.push("", "---", `Signals detected: ${allLabels.join(" · ") || "none"}`);
+      return out.join("\n");
     }
-  }
-  return lines;
-}
 
-function renderInline(text) {
-  return text.split(/(`[^`]+`)/g).map((part, i) =>
-    part.startsWith("`") && part.endsWith("`")
-      ? <code key={i} className="inline-code">{part.slice(1, -1)}</code>
-      : <span key={i}>{part}</span>
-  );
-}
+    /* ── Text parser ────────────────────────────────────── */
+    const CONFIG_RE = /^[\w]+\s*:/;
 
-function lineText(line) {
-  if (line.type === "text")       return line.text;
-  if (line.type === "code")       return line.rows.join("\n");
-  if (line.type === "intro-code") return line.intro + "\n" + line.rows.join("\n");
-  return "";
-}
-
-function generatePromptBlock(lines, tags) {
-  const entries = [];
-  for (const line of lines) {
-    const lineTags = tags[line.id] ?? [];
-    const text = lineText(line);
-    if (lineTags.length === 0) {
-      entries.push({ labels: [], text });
-    } else {
-      const labels = [...new Set(lineTags.map(t => {
-        const el = ELEMENTS.find(e => e.id === t.elementId);
-        return el ? el.label.toUpperCase() : null;
-      }).filter(Boolean))];
-      entries.push({ labels, text });
+    function parseText(raw) {
+      const paragraphs = raw.split(/\n{2,}/g).map(p => p.trim()).filter(Boolean);
+      const lines = [];
+      let id = 0;
+      for (const para of paragraphs) {
+        const rows = para.split("\n").map(r => r.trim()).filter(Boolean);
+        if (rows.every(r => CONFIG_RE.test(r))) {
+          lines.push({ id: `l${++id}`, type: "code", rows });
+        } else if (rows.length > 1 && rows.slice(1).every(r => CONFIG_RE.test(r))) {
+          lines.push({ id: `l${++id}`, type: "intro-code", intro: rows[0], rows: rows.slice(1) });
+        } else {
+          lines.push({ id: `l${++id}`, type: "text", text: para.replace(/\n/g, " ") });
+        }
+      }
+      return lines;
     }
-  }
-  const out = ["## Customer Message (annotated)", ""];
-  for (const { labels, text } of entries) {
-    if (labels.length === 0) {
-      const indent = " ".repeat("[UNLABELED] ".length);
-      out.push(`[UNLABELED] ${text.replace(/\n/g, "\n" + indent)}`);
-    } else {
-      const tag = labels.join(" / ");
-      const indent = " ".repeat(tag.length + 3);
-      out.push(`[${tag}] ${text.replace(/\n/g, "\n" + indent)}`);
+
+    function renderInline(text) {
+      return text.split(/(`[^`]+`)/g).map((part, i) =>
+        part.startsWith("`") && part.endsWith("`")
+          ? <code key={i} className="inline-code">{part.slice(1, -1)}</code>
+          : <span key={i}>{part}</span>
+      );
     }
-  }
-  const allLabels = [...new Set(entries.flatMap(e => e.labels))];
-  out.push("", "---", `Signals detected: ${allLabels.join(" · ") || "none"}`);
-  return out.join("\n");
-}
 
-let _uid = 0;
-const nextUid = () => ++_uid;
-
-function getInitialStage() {
-  try {
-    const p = new URLSearchParams(window.location.search).get("stage");
-    if (p && STAGES.find(s => s.id === p)) return p;
-  } catch (_) {}
-  return null;
-}
-
-/* ── App ───────────────────────────────────────────────── */
-function App() {
-  const [raw, setRaw]                 = useState(DEFAULT_TEXT);
-  const [lines, setLines]             = useState(() => parseText(DEFAULT_TEXT));
-  const [editing, setEditing]         = useState(false);
-  const [tags, setTags]               = useState({});
-  const [dragging, setDragging]       = useState(null);
-  const [over, setOver]               = useState(null);
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [promptBlock, setPromptBlock] = useState(null);
-  const [copied, setCopied]           = useState(false);
-  const [activeStage, setActiveStage] = useState(getInitialStage);
-  const [copiedStage, setCopiedStage] = useState(null);
-
-  function toggleStage(id) {
-    setActiveStage(prev => prev === id ? null : id);
-  }
-
-  function copyPrompt(stage) {
-    navigator.clipboard.writeText(stage.prompt).then(() => {
-      setCopiedStage(stage.id);
-      setTimeout(() => setCopiedStage(null), 2000);
-    });
-  }
-
-  function handleGenerate() {
-    setPromptBlock(generatePromptBlock(lines, tags));
-    setCopied(false);
-  }
-
-  function handleCopyPrompt(text) {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
-
-  function loadMessage() {
-    setLines(parseText(raw)); setTags({}); setEditing(false);
-  }
-
-  function onDrop(lineId) {
-    if (!dragging) return;
-    setTags(prev => ({
-      ...prev,
-      [lineId]: [...(prev[lineId] ?? []), { uid: nextUid(), elementId: dragging }],
-    }));
-    setDragging(null); setOver(null);
-  }
-
-  function removeTag(lineId, uid) {
-    setTags(prev => ({
-      ...prev,
-      [lineId]: (prev[lineId] ?? []).filter(t => t.uid !== uid),
-    }));
-  }
-
-  const totalTags = Object.values(tags).flat().length;
-
-  return (
-    <div className="app">
-
-      {/* ── Header ── */}
-      <div className="page-header">
-        <span className="page-title">Ticket Annotator</span>
-        <span className="page-badge">L3 — Customer-Facing Response</span>
-      </div>
-
-      {/* ── Editing panel ── */}
-      {editing ? (
-        <>
-          <textarea
-            className="paste-area"
-            value={raw}
-            onChange={e => setRaw(e.target.value)}
-            placeholder="Paste the customer message here…"
-          />
-          <div className="row" style={{ gap: 8 }}>
-            <button className="btn btn-primary" onClick={loadMessage}>Load message</button>
-            <button className="btn btn-ghost" onClick={() => setEditing(false)}>Cancel</button>
-          </div>
-        </>
-      ) : (
-        <>
-          {/* Signal palette */}
-          <div className="row wrap" style={{ gap: 8 }}>
-            {paletteOpen && ELEMENTS.map(el => (
-              <div
-                key={el.id}
-                className={`pill-drag${dragging === el.id ? " dragging" : ""}`}
-                draggable
-                onDragStart={() => setDragging(el.id)}
-                onDragEnd={() => { setDragging(null); setOver(null); }}
-              >
-                <span className={`pill pill-${el.tone}`}>{el.label}</span>
+    function ConfigRows({ rows }) {
+      return (
+        <div className="config-block">
+          {rows.map((row, i) => {
+            const ci = row.indexOf(":");
+            return (
+              <div key={i} className="config-row">
+                <span className="config-key">{row.slice(0, ci)}</span>
+                <span className="config-val">{row.slice(ci)}</span>
               </div>
-            ))}
-            <div className="spacer" />
-            {totalTags > 0 && (
-              <span className="count-badge">{totalTags} signal{totalTags !== 1 ? "s" : ""}</span>
-            )}
-            <button className="toggle-btn" onClick={() => setPaletteOpen(p => !p)}>
-              {paletteOpen ? "Hide signals" : "Show signals"}
+            );
+          })}
+        </div>
+      );
+    }
+
+    let _uid = 0;
+    const nextUid = () => ++_uid;
+
+    const DEFAULT_TEXT = `We have been waiting over two weeks for a resolution on this issue.
+
+Our monitoring dashboards are completely broken and our on-call team is flying blind.
+
+I escalated internally and our VP of Engineering is now asking for daily status updates.
+
+We were told last week that a fix would be deployed, but nothing has changed.
+
+This is directly impacting our ability to respond to production incidents.
+
+We need a concrete timeline for resolution today, or we will need to involve our account team.`;
+
+    const PILLARS = ["CONTEXT", "INSTRUCTIONS", "REASONING", "EXAMPLES", "OUTPUT FORMAT"];
+
+    const PILLAR_META = {
+      'CONTEXT':       { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+      'INSTRUCTIONS':  { color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
+      'EXAMPLES':      { color: '#7c3aed', bg: '#faf5ff', border: '#ddd6fe' },
+      'REASONING':     { color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+      'OUTPUT FORMAT': { color: '#0f766e', bg: '#f0fdfa', border: '#99f6e4' },
+    };
+
+    function PillarPrompt({ text }) {
+      const HEADERS = Object.keys(PILLAR_META);
+      const headerRe = new RegExp(`^(${HEADERS.join('|')}):`, 'm');
+      const parts = [];
+      let remaining = text;
+      while (remaining.length > 0) {
+        const m = headerRe.exec(remaining);
+        if (!m) { parts.push({ header: null, body: remaining }); break; }
+        if (m.index > 0) parts.push({ header: null, body: remaining.slice(0, m.index) });
+        const header = m[1];
+        const afterHeader = remaining.slice(m.index + m[0].length).trimStart();
+        const next = headerRe.exec(afterHeader);
+        const body = next ? afterHeader.slice(0, next.index) : afterHeader;
+        parts.push({ header, body: body.trimEnd() });
+        remaining = next ? afterHeader.slice(next.index) : '';
+      }
+      if (parts.every(p => !p.header)) {
+        return <pre className="stage-prompt">{text}</pre>;
+      }
+      return (
+        <pre className="stage-prompt" style={{padding:0,background:'transparent',border:'none'}}>
+          {parts.map((p, i) => {
+            if (!p.header) return p.body ? <span key={i}>{p.body}</span> : null;
+            const m = PILLAR_META[p.header] || { color:'#64748b' };
+            return (
+              <span key={i} style={{display:'block',borderLeft:`3px solid ${m.border}`,paddingLeft:8,marginBottom:4,background:m.bg,borderRadius:'0 4px 4px 0'}}>
+                <span style={{color:m.color,fontWeight:700}}>{p.header}:</span>
+                {p.body ? '\n' + p.body : ''}
+                {'\n'}
+              </span>
+            );
+          })}
+        </pre>
+      );
+    }
+
+    function getInitialStage() {
+      try {
+        const p = new URLSearchParams(window.location.search).get("stage");
+        if (p && STAGES.find(s => s.id === p)) return p;
+      } catch (_) {}
+      return null;
+    }
+
+    /* ── Session routing prompts ────────────────────────── */
+    const CANVAS_SESSION_ROUTING = `CONTEXT:
+You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses. The participant is working through a 3-step response workflow (Evaluate → Draft → Criticize). Your role is to render each step's output as a Cursor canvas file — not to explain or narrate in chat.
+
+INSTRUCTIONS:
+For every response step prompt the participant sends, produce a Cursor canvas file at:
+ ~/Desktop/workshop/l3-step-N.canvas.tsx
+(Replace N with the step number: 4 for Evaluate, 5 for Draft, 6 for Criticize.) Do not output any analysis in chat. In chat, reply only with:
+ "Canvas ready — open l3-step-N.canvas.tsx"
+
+Apply the following canvas layout for each step:
+- Step 4 (Evaluate): Risk assessment panel — detected signals table (Signal | Detected | Phrase | Risk contribution, rowTone: danger=High, warning=Med, neutral=Low), dominant signal callout, risk level badge, stakeholder decision row at bottom.
+- Step 5 (Draft): Response blueprint — signal mapping table (Signal | Detected Phrase | Required Move, in priority order), tone approach callout (info), response draft paragraphs (one per signal, bold signal label per paragraph).
+- Step 6 (Criticize): Draft review panel — signal coverage table (Signal | Status | Note, rowTone: success=Addressed, warning=Partial, danger=Missing), filler phrases table (Original | Replacement), opening sentence verdict callout, single best edit diff strip (theme.diff.stripRemoved → theme.diff.stripAdded).
+
+REASONING:
+Before writing the canvas, identify which step the prompt belongs to, then select the matching layout above.
+Keep every canvas focused: max 7 signal rows, one bold takeaway line at the bottom.
+
+OUTPUT FORMAT:
+A single self-contained .canvas.tsx file following these rules exactly:
+- No hardcoded hex colors. Use only useHostTheme() tokens.
+- Valid token paths: theme.accent.primary · theme.fill.primary/secondary/tertiary/quaternary · theme.stroke.primary/secondary/tertiary · theme.text.primary/secondary/tertiary/onAccent · theme.bg.editor/chrome/elevated · theme.diff.stripAdded · theme.diff.stripRemoved
+- Table rowTone valid values: "success" | "danger" | "warning" | "info" | "neutral"
+- Pill tone valid values: "neutral" | "added" | "deleted" | "renamed" | "success" | "warning" | "info"
+- No box-shadow, no gradients, no emoji decoration, no hardcoded font sizes above 24px.`;
+
+    const HTML_SESSION_ROUTING = `CONTEXT:
+You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses. The participant is working through a 3-step response workflow (Evaluate → Draft → Criticize). Your role is to render each step's output as a self-contained HTML file — not to explain or narrate in chat.
+
+INSTRUCTIONS:
+For every response step prompt the participant sends, write a single self-contained HTML file to:
+ ~/Desktop/workshop/l3-step-N.html
+(Replace N with the step number: 4 for Evaluate, 5 for Draft, 6 for Criticize.) After writing, run: open ~/Desktop/workshop/l3-step-N.html
+In chat, reply only with: "Step N ready — check Chrome"
+
+Apply the following visual layout for each step:
+- Step 4 (Evaluate): Signal detection table (Signal | Detected | Phrase, left-border: red=High, amber=Med, gray=Low). Dominant signal in a colored box. Risk badge (green=Low, amber=Medium, red=High). Stakeholder decision at bottom.
+- Step 5 (Draft): Signal mapping table (Signal | Detected Phrase | Required Move, in priority order). Tone approach box. Response paragraphs — one per signal, bold signal label, concrete commitment, no filler phrases.
+- Step 6 (Criticize): Signal coverage table (Signal | Status, green=Addressed, red=Missing, amber=Partial). Filler phrases found (Original → Replacement). Opening sentence verdict. Single best edit in a diff box (red line → green line).
+
+REASONING:
+Before writing, identify which step the prompt belongs to and select the matching layout. Keep output focused: max one bold takeaway at the bottom of the page.
+
+OUTPUT FORMAT:
+A single self-contained HTML file with inline CSS only. Must follow these rules:
+- No external dependencies (no CDN links, no script tags loading remote assets)
+- Colors: white background, dark text, green = #22c55e, red = #ef4444, amber = #f59e0b, gray = #94a3b8
+- Tables: alternating row shading (#f8fafc), colored left-border per row for status
+- Font: system-ui, 13px body, bold section headers`;
+
+    /* ── App ────────────────────────────────────────────── */
+    function App() {
+      const [raw, setRaw] = useState(DEFAULT_TEXT);
+      const [lines, setLines] = useState(() => parseText(DEFAULT_TEXT));
+      const [editing, setEditing] = useState(false);
+      const [tags, setTags] = useState({});
+      const [dragging, setDragging] = useState(null);
+      const [over, setOver] = useState(null);
+      const [paletteOpen, setPaletteOpen] = useState(false);
+      const [promptBlock, setPromptBlock] = useState(null);
+      const [copied, setCopied] = useState(false);
+      const [activeStage, setActiveStage] = useState(() => getInitialStage() ?? null);
+      const [copiedStage, setCopiedStage] = useState(null);
+      const [tool, setTool] = useState("cursor");
+      const [promptTab, setPromptTab] = useState("goal");
+      useEffect(() => { setPromptTab("goal"); }, [activeStage]);
+
+      function toggleStage(id) {
+        setActiveStage(prev => prev === id ? null : id);
+      }
+
+      function buildPromptWithContext(stage, base) {
+        const stageIndex = STAGES.findIndex(s => s.id === stage.id);
+        if (stageIndex === 0) {
+          const block = Object.values(tags).flat().length > 0
+            ? generatePromptBlock(lines, tags, ELEMENTS)
+            : raw;
+          return base + `\n\n---\n${block}`;
+        }
+        return base;
+      }
+
+      function copyPrompt(stage) {
+        navigator.clipboard.writeText(buildPromptWithContext(stage, stage.prompt)).then(() => {
+          setCopiedStage(stage.id);
+          setTimeout(() => setCopiedStage(null), 2000);
+        });
+      }
+
+      function handleGenerate() {
+        setPromptBlock(generatePromptBlock(lines, tags, ELEMENTS));
+        setCopied(false);
+      }
+
+      function loadMessage() {
+        setLines(parseText(raw)); setTags({}); setEditing(false);
+      }
+
+      function onDrop(lineId) {
+        if (!dragging) return;
+        setTags(prev => ({
+          ...prev,
+          [lineId]: [...(prev[lineId] ?? []), { uid: nextUid(), elementId: dragging }],
+        }));
+        setDragging(null); setOver(null);
+      }
+
+      function removeTag(lineId, uid) {
+        setTags(prev => ({
+          ...prev,
+          [lineId]: (prev[lineId] ?? []).filter(t => t.uid !== uid),
+        }));
+      }
+
+      const totalTags = Object.values(tags).flat().length;
+      const activeStageObj = STAGES.find(s => s.id === activeStage) ?? null;
+
+      return (
+        <div className="app">
+
+          {/* ── Sidebar ── */}
+          <div className="sidebar">
+            <div className="sidebar-header">L3</div>
+            <button
+              className={`sidebar-stage${activeStage === "prep" ? " active" : ""}`}
+              onClick={() => setActiveStage(prev => prev === "prep" ? null : "prep")}
+            >
+              <span className="sidebar-num" style={activeStage==="prep"?{background:'#d97706'}:{}}><Ic n="BookOpen" size={10} color={activeStage==="prep"?"#fff":"#64748b"} /></span>
+              <span className="sidebar-label">Preparation</span>
             </button>
-            <button className="toggle-btn" onClick={() => setEditing(true)}>Change message</button>
-            {totalTags > 0 && (
-              <button className="btn btn-primary" style={{ fontSize: 12, padding: "4px 12px" }} onClick={handleGenerate}>
-                Generate annotated block
-              </button>
-            )}
-          </div>
-
-          <hr className="divider" />
-          <span className="section-label">Customer Message</span>
-
-          {/* Drop zones */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {lines.map(line => {
-              const lineTags = tags[line.id] ?? [];
-              const isOver   = over === line.id;
-              const topEl    = lineTags[0] ? ELEMENTS.find(e => e.id === lineTags[0].elementId) : null;
-              const toneClass = topEl && !isOver ? `has-${topEl.tone}` : "";
-
-              return (
-                <div
-                  key={line.id}
-                  className={`msg-line${isOver ? " drag-over" : ""}${toneClass ? " " + toneClass : ""}`}
-                  onDragOver={e => { e.preventDefault(); setOver(line.id); }}
-                  onDragLeave={() => setOver(null)}
-                  onDrop={() => onDrop(line.id)}
-                >
-                  {line.type === "text" && (
-                    <p className="text-sm">{renderInline(line.text)}</p>
-                  )}
-                  {lineTags.length > 0 && (
-                    <div className="tags-row">
-                      {lineTags.map(tag => {
-                        const el = ELEMENTS.find(e => e.id === tag.elementId);
-                        if (!el) return null;
-                        return (
-                          <span
-                            key={tag.uid}
-                            className={`pill pill-${el.tone} tag-chip`}
-                            title="Click to remove"
-                            onClick={() => removeTag(line.id, tag.uid)}
-                          >
-                            {el.label} ×
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* ── Stage buttons + panels ── */}
-          <hr className="divider" />
-          <div className="stage-bar">
-            {STAGES.map((stage, i) => (
-              <button
-                key={stage.id}
-                className={`stage-btn${activeStage === stage.id ? " active" : ""}`}
-                onClick={() => toggleStage(stage.id)}
-              >
-                <span className="stage-num">{i + 1}</span>
-                {stage.label}
+            <div style={{height:8}} />
+            {STAGES.map((stage) => (
+              <button key={stage.id} className={`sidebar-stage${activeStage === stage.id ? " active" : ""}`}
+                onClick={() => toggleStage(stage.id)}>
+                <span className="sidebar-num" style={activeStage===stage.id?{background:stage.color}:{}}
+                  >{stage.stepNum}</span>
+                <span className="sidebar-label">{stage.label}</span>
               </button>
             ))}
           </div>
 
-          {STAGES.map(stage => (
-            <div key={stage.id} className={`stage-panel${activeStage === stage.id ? " open" : ""}`}>
-              <div className="stage-panel-inner">
-                <div className="stage-title">
-                  Stage {STAGES.indexOf(stage) + 1} — {stage.label}
+          {/* ── Main ── */}
+          <div className="main">
+
+            {/* Welcome */}
+            {activeStage === null && (
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,padding:'60px 20px',textAlign:'center'}}>
+                <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+                  <div style={{width:52,height:52,borderRadius:14,background:'#fffbeb',border:'2px solid #fde68a',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <Ic n="MessageSquareDiff" size={26} color="#d97706" />
+                  </div>
+                  <div style={{fontSize:22,fontWeight:700,color:'#1f2328'}}>L3 Response Workshop</div>
+                  <div style={{fontSize:13,color:'#64748b',maxWidth:480,lineHeight:1.6}}>
+                    A 3-step AI-assisted workflow for customer-facing responses. Annotate the customer message with signals, then evaluate risk, draft a response, and criticize the draft before sending.
+                  </div>
                 </div>
-                {stage.promptLight && (
-                  <details className="light-details">
-                    <summary className="light-summary">Light version <span className="light-hint">(expand)</span></summary>
-                    <div className="stage-prompt-wrap" style={{ marginTop: 8 }}>
-                      <pre className="stage-prompt">{stage.promptLight}</pre>
-                      <button
-                        className="stage-copy-btn"
-                        onClick={() => { navigator.clipboard.writeText(stage.promptLight); setCopiedStage(stage.id + "_light"); setTimeout(() => setCopiedStage(null), 2000); }}
-                      >
-                        {copiedStage === stage.id + "_light" ? "Copied!" : "Copy"}
-                      </button>
+                <div style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:'center'}}>
+                  {[
+                    {icon:'ScanSearch',label:'Step 4: Evaluate',color:'#d97706',bg:'#fffbeb',id:'evaluate'},
+                    {icon:'PenLine',label:'Step 5: Draft',color:'#15803d',bg:'#f0fdf4',id:'draft'},
+                    {icon:'ShieldCheck',label:'Step 6: Criticize',color:'#6d28d9',bg:'#faf5ff',id:'criticize'},
+                  ].map(s=>(
+                    <div key={s.id} onClick={()=>setActiveStage(s.id)} style={{cursor:'pointer',display:'flex',alignItems:'center',gap:8,padding:'10px 18px',borderRadius:10,background:s.bg,border:`1.5px solid`,borderColor:s.bg,boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
+                      <Ic n={s.icon} size={16} color={s.color} />
+                      <span style={{fontSize:13,fontWeight:600,color:s.color}}>{s.label}</span>
                     </div>
-                  </details>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setActiveStage("prep")}
+                  style={{background:'#d97706',color:'#fff',border:'none',borderRadius:10,padding:'12px 32px',fontSize:14,fontWeight:700,cursor:'pointer',letterSpacing:'0.01em'}}
+                  onMouseOver={e=>e.target.style.background='#b45309'}
+                  onMouseOut={e=>e.target.style.background='#d97706'}
+                >
+                  Start Workshop →
+                </button>
+              </div>
+            )}
+
+            {/* Preparation panel */}
+            {activeStage === "prep" && (
+              <div className="prep-panel">
+                <div className="prep-panel-title">Workshop Preparation</div>
+                <div className="prep-hint">
+                  Paste this prompt once at the start of your Cursor or Claude session. The AI will remember the routing rules for all 3 steps.
+                </div>
+
+                {/* Setup reference */}
+                <div className="prep-block">
+                  <div className="prep-block-label">3-Desktop Setup</div>
+                  <div style={{fontSize:12,color:'#78350f',lineHeight:1.6}}>
+                    <strong>Desktop 1:</strong> Chrome — Zendesk + this annotation tool<br />
+                    <strong>Desktop 2:</strong> Cursor or Claude — AI chat session<br />
+                    <strong>Desktop 3:</strong> Chrome — L3 slides in Presenter View (share this window in Zoom)
+                  </div>
+                  <div style={{fontSize:11,color:'#92400e',marginTop:4}}>Switch desktops with <strong>Ctrl + Left / Right</strong></div>
+                </div>
+
+                <hr className="divider" />
+
+                {/* Tool toggle */}
+                <div className="prep-block">
+                  <div className="prep-block-label">Session Routing — paste once in AI chat</div>
+                  <div className="mode-bar">
+                    <button className={`mode-btn${tool==="cursor"?" active":""}`} onClick={()=>setTool("cursor")}>Cursor Canvas</button>
+                    <button className={`mode-btn${tool==="claude"?" active":""}`} onClick={()=>setTool("claude")}>Claude HTML</button>
+                  </div>
+                  <div className="stage-prompt-wrap" style={{marginTop:6}}>
+                    <pre className="stage-prompt" style={{fontSize:11,maxHeight:200,overflow:'auto'}}>
+                      {tool === "cursor" ? CANVAS_SESSION_ROUTING : HTML_SESSION_ROUTING}
+                    </pre>
+                    <button className="stage-copy-btn" onClick={()=>{
+                      const text = tool==="cursor" ? CANVAS_SESSION_ROUTING : HTML_SESSION_ROUTING;
+                      navigator.clipboard.writeText(text).then(()=>{setCopiedStage("prep");setTimeout(()=>setCopiedStage(null),2000);});
+                    }}>
+                      {copiedStage==="prep" ? "✓ Copied!" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+
+                <hr className="divider" />
+
+                {/* Workshop steps reference */}
+                <div className="prep-block">
+                  <div className="prep-block-label">Live Example Flow (repeat per scenario)</div>
+                  {[
+                    ["1. Present","Share the customer message — give participants 1 min to read"],
+                    ["2. Annotate","Open this tool, paste the message, drag signals onto each sentence"],
+                    ["3. Generate","Click \"Generate prompt block\" → paste into AI chat"],
+                    ["4. Evaluate","Run the Step 4 prompt → discuss risk level with the group"],
+                    ["5. Draft","Ask participants to write their own prompt first, then reveal Complete version"],
+                    ["6. Criticize","Ask the group: \"What would you change before sending?\""],
+                  ].map(([step,desc],i)=>(
+                    <div key={i} style={{display:'flex',gap:8,fontSize:12,color:'#78350f',lineHeight:1.5}}>
+                      <span style={{fontWeight:700,flexShrink:0,color:'#d97706'}}>{step}:</span>
+                      <span>{desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Customer message + stages */}
+            {activeStage !== "prep" && activeStage !== null && (
+              <>
+                {/* ── Annotation panel (always shown for Evaluate; collapsed for Draft/Criticize) ── */}
+                {activeStage === "evaluate" ? (
+                  <>
+                    {editing ? (
+                      <>
+                        <textarea
+                          className="paste-area"
+                          value={raw}
+                          onChange={e => setRaw(e.target.value)}
+                          placeholder="Paste the customer message here…"
+                        />
+                        <div className="row" style={{gap:8}}>
+                          <button className="btn btn-primary" onClick={loadMessage}>Load message</button>
+                          <button className="btn btn-ghost" onClick={()=>setEditing(false)}>Cancel</button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Signal palette */}
+                        <div className="row wrap" style={{gap:8,alignItems:'center'}}>
+                          {paletteOpen && ELEMENTS.map(el => (
+                            <span key={el.id}
+                              className={`pill pill-${el.tone} pill-drag${dragging===el.id?" dragging":""}`}
+                              draggable
+                              onDragStart={() => setDragging(el.id)}
+                              onDragEnd={() => { setDragging(null); setOver(null); }}
+                            >{el.label}</span>
+                          ))}
+                          <span className="spacer" />
+                          {totalTags > 0 && (
+                            <span className="count-badge">{totalTags} signal{totalTags!==1?"s":""}</span>
+                          )}
+                          <button className="toggle-btn" onClick={()=>setPaletteOpen(p=>!p)}>
+                            {paletteOpen ? "Hide signals" : "Show signals"}
+                          </button>
+                          <button className="toggle-btn" onClick={()=>setEditing(true)}>Change message</button>
+                          <button className="btn btn-primary" style={{fontSize:12,padding:'5px 12px'}} onClick={()=>{
+                            const text = totalTags > 0 ? generatePromptBlock(lines, tags, ELEMENTS) : raw;
+                            navigator.clipboard.writeText(text);
+                            setCopied(true);
+                            setTimeout(()=>setCopied(false),2000);
+                          }}>
+                            {copied ? "✓ Copied!" : "Copy message"}
+                          </button>
+                        </div>
+
+                        {/* Customer message with drop zones */}
+                        <div>
+                          <div className="section-label" style={{marginBottom:8}}>Customer Message</div>
+                          <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                            {lines.map(line => {
+                              const lineTags = tags[line.id] ?? [];
+                              const isOver = over === line.id;
+                              const topEl = lineTags[0] ? ELEMENTS.find(e => e.id === lineTags[0].elementId) : null;
+                              const toneClass = topEl && !isOver ? `has-${topEl.tone}` : "";
+                              return (
+                                <div key={line.id}
+                                  className={`msg-line ${toneClass}${isOver?" drag-over":""}`}
+                                  onDragOver={e => { e.preventDefault(); setOver(line.id); }}
+                                  onDragLeave={() => setOver(null)}
+                                  onDrop={() => onDrop(line.id)}
+                                >
+                                  {line.type === "text" && <span className="text-sm">{renderInline(line.text)}</span>}
+                                  {line.type === "code" && <ConfigRows rows={line.rows} />}
+                                  {line.type === "intro-code" && (
+                                    <>
+                                      <span className="text-sm">{renderInline(line.intro)}</span>
+                                      <ConfigRows rows={line.rows} />
+                                    </>
+                                  )}
+                                  {lineTags.length > 0 && (
+                                    <div className="tags-row">
+                                      {lineTags.map(tag => {
+                                        const el = ELEMENTS.find(e => e.id === tag.elementId);
+                                        if (!el) return null;
+                                        return (
+                                          <span key={tag.uid} className={`pill pill-${el.tone} tag-chip`}
+                                            onClick={() => removeTag(line.id, tag.uid)}>
+                                            {el.label} ×
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  /* Collapsed message for Draft/Criticize */
+                  <div className="row" style={{gap:8,padding:'8px 12px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8}}>
+                    {totalTags > 0 && <span className="count-badge">{totalTags} signal{totalTags!==1?"s":""} annotated</span>}
+                    <span className="spacer" />
+                    <button className="toggle-btn" onClick={()=>setActiveStage('evaluate')}>View annotation →</button>
+                  </div>
                 )}
-                {stage.promptLight && <div className="prompt-version-label">Complete version</div>}
-                <div className="stage-prompt-wrap">
-                  <pre className="stage-prompt">{renderPrompt(stage.prompt)}</pre>
-                  <button className="stage-copy-btn" onClick={() => copyPrompt(stage)}>
-                    {copiedStage === stage.id ? "Copied!" : "Copy"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
 
-          {/* Annotated prompt block output */}
-          {promptBlock && (
-            <>
-              <hr className="divider" />
-              <div className="prompt-panel">
-                <div className="prompt-panel-header">
-                  <span className="prompt-panel-title">Annotated prompt block</span>
-                  <div className="spacer" />
-                  <button
-                    className="btn btn-ghost"
-                    style={{ fontSize: 12, padding: "4px 12px", marginLeft: 8 }}
-                    onClick={() => handleCopyPrompt(promptBlock)}
-                  >
-                    {copied ? "Copied!" : "Copy"}
-                  </button>
-                  <button className="toggle-btn" style={{ marginLeft: 4 }} onClick={() => setPromptBlock(null)}>
-                    ✕
-                  </button>
-                </div>
-                <pre className="prompt-output">{promptBlock}</pre>
-              </div>
-            </>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
+                {/* ── Stage content ── */}
+                {activeStageObj && (() => {
+                  const stage = activeStageObj;
+                  const sv = STAGE_VISUALS[stage.id];
+                  return (
+                    <>
+                      <hr className="divider" />
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        {sv && <Ic n={sv.icon} size={16} color={stage.color} />}
+                        <div className="stage-title" style={{color:stage.color}}>
+                          Step {stage.stepNum} — {stage.label}
+                          {stage.audienceExercise && (
+                            <span style={{marginLeft:10,fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:999,background:'#dcfce7',color:'#15803d'}}>Audience exercise</span>
+                          )}
+                        </div>
+                      </div>
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-</script>
+                      {/* Visual hint */}
+                      {sv && (
+                        <div style={{border:`1px solid ${stage.border}`,borderRadius:8,background:stage.bg,padding:'10px 14px'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+                            <Ic n={sv.icon} size={12} color={stage.color} />
+                            <span style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:stage.color}}>Visual Hint</span>
+                            <span style={{fontSize:11,color:'#94a3b8',marginLeft:4}}>{sv.concept}</span>
+                          </div>
+                          <sv.graphic />
+                        </div>
+                      )}
+
+                      {/* Checklist */}
+                      {stage.steps && (
+                        <div className="checklist">
+                          <div className="checklist-label">Checklist</div>
+                          {stage.steps.map((step, i) => {
+                            const hintFn = STAGE_VISUAL_HINTS[stage.id] && STAGE_VISUAL_HINTS[stage.id][i];
+                            return (
+                              <div key={i} className="checklist-item">
+                                {hintFn ? (
+                                  <details className="hint-toggle" style={{width:'100%'}}>
+                                    <summary>
+                                      <span className="checklist-dot" />
+                                      <span>{step}</span>
+                                      <span className="hint-icon"><Ic n="ChevronDown" size={12} /></span>
+                                    </summary>
+                                    <div className="hint-visual">{hintFn()}</div>
+                                  </details>
+                                ) : (
+                                  <>
+                                    <span className="checklist-dot" />
+                                    <span>{step}</span>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Prompts — 3-tab section */}
+                      <div style={{background:stage.bg,border:`1.5px solid ${stage.border}`,borderRadius:8,padding:'12px 14px',display:'flex',flexDirection:'column',gap:10}}>
+                        <div style={{display:'flex',alignItems:'center',gap:8}}>
+                          <span style={{fontSize:13,fontWeight:600,color:stage.color}}>Prompt</span>
+                          <div style={{display:'flex',background:'#f1f5f9',borderRadius:999,padding:3,gap:2,marginLeft:'auto'}}>
+                            {[
+                              {id:'goal',label:'Goal',icon:'Target'},
+                              {id:'light',label:'Light (result)',icon:'Zap'},
+                              {id:'complete',label:'Complete (result)',icon:'BookOpen'},
+                            ].map(tab => {
+                              const active = promptTab === tab.id;
+                              return (
+                                <button key={tab.id} onClick={()=>setPromptTab(tab.id)} style={{
+                                  flex:1,border:'none',borderRadius:6,padding:'5px 10px',
+                                  fontSize:11,fontWeight:600,cursor:'pointer',
+                                  background:active?'#fff':'transparent',
+                                  color:active?stage.color:'#94a3b8',
+                                  boxShadow:active?'0 1px 3px rgba(0,0,0,0.08)':'none',
+                                  transition:'all 0.15s',
+                                  display:'flex',alignItems:'center',justifyContent:'center',gap:4,
+                                  whiteSpace:'nowrap',
+                                }}>
+                                  <Ic n={tab.icon} size={10} />
+                                  {tab.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {promptTab === 'goal' && (
+                          <div style={{fontSize:13,color:'#475569',lineHeight:1.6,padding:'2px 0'}}>
+                            {stage.goal}
+                          </div>
+                        )}
+
+                        {promptTab === 'light' && stage.promptLight && (
+                          <div className="stage-prompt-wrap">
+                            <pre className="stage-prompt">{stage.promptLight}</pre>
+                            <button className="stage-copy-btn" onClick={()=>{
+                              navigator.clipboard.writeText(buildPromptWithContext(stage, stage.promptLight));
+                              setCopiedStage(stage.id+"_light");
+                              setTimeout(()=>setCopiedStage(null),2000);
+                            }}>
+                              {copiedStage===stage.id+"_light"?"✓ Copied!":"Copy"}
+                            </button>
+                          </div>
+                        )}
+
+                        {promptTab === 'complete' && (
+                          <div className="stage-prompt-wrap">
+                            <PillarPrompt text={stage.prompt} />
+                            <button className="stage-copy-btn" onClick={()=>copyPrompt(stage)}>
+                              {copiedStage===stage.id?"✓ Copied!":"Copy"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
 </body>
 </html>
