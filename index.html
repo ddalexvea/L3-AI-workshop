@@ -614,7 +614,7 @@
     /* ── Stage definitions ──────────────────────────────── */
     const L3_STAGES = [
       {
-        id: "evaluate", label: "Evaluate", stepNum: 4,
+        id: "evaluate", label: "Evaluate", stepNum: 1,
         color: "#d97706", bg: "#fffbeb", border: "#fde68a",
         goal: "Detect every signal before rating risk. Apply the anti-anchoring rule: read the full message before assigning a dominant signal. A message can carry Urgency without Escalation Signal, or Negative Sentiment without Business Impact.",
         steps: [
@@ -653,7 +653,7 @@ OUTPUT FORMAT:
 - Stakeholder decision (only if risk is Medium or High)`,
       },
       {
-        id: "draft", label: "Draft", stepNum: 5, audienceExercise: true,
+        id: "draft", label: "Draft", stepNum: 2, audienceExercise: true,
         color: "#15803d", bg: "#f0fdf4", border: "#86efac",
         goal: "Map each detected signal to a required response move. Order paragraphs by priority (Escalation > Business Impact > Urgency > Unmet Expectation > Sentiment > Context > Request). Never write 'soon' — give a real time window or the next concrete action.",
         steps: [
@@ -691,7 +691,7 @@ OUTPUT FORMAT:
 - Response draft (one paragraph per point, professional and empathetic)`,
       },
       {
-        id: "criticize", label: "Criticize", stepNum: 6,
+        id: "criticize", label: "Criticize", stepNum: 3,
         color: "#6d28d9", bg: "#faf5ff", border: "#ddd6fe",
         goal: "Check signal coverage first — a draft that misses a signal is worse than one with filler phrases. Opening sentence must lead with empathy if Sentiment or Urgency is dominant. The single most impactful edit closes the largest signal gap.",
         steps: [
@@ -1230,25 +1230,6 @@ Output the customer message only -- no explanation, no signal labels.`;
                   </div>
                 </div>
 
-                <hr className="divider" />
-
-                {/* Workshop steps reference */}
-                <div className="prep-block">
-                  <div className="prep-block-label">Live Example Flow (repeat per scenario)</div>
-                  {[
-                    ["1. Present","Share the customer message — give participants 1 min to read"],
-                    ["2. Annotate","Open this tool, paste the message, drag signals onto each sentence"],
-                    ["3. Generate","Click \"Generate prompt block\" → paste into AI chat"],
-                    ["4. Evaluate","Run the Step 4 prompt → discuss risk level with the group"],
-                    ["5. Draft","Ask participants to write their own prompt first, then reveal Complete version"],
-                    ["6. Criticize","Ask the group: \"What would you change before sending?\""],
-                  ].map(([step,desc],i)=>(
-                    <div key={i} style={{display:'flex',gap:8,fontSize:12,color:'#78350f',lineHeight:1.5}}>
-                      <span style={{fontWeight:700,flexShrink:0,color:'#d97706'}}>{step}:</span>
-                      <span>{desc}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
 
