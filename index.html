@@ -40,7 +40,7 @@
       transition: background 0.12s; border-left: 3px solid transparent;
     }
     .sidebar-stage:hover { background: #f1f5f9; }
-    .sidebar-stage.active { background: #fff7ed; border-left-color: #d97706; }
+    .sidebar-stage.active { border-left-color: #d97706; }
     .sidebar-num {
       width: 22px; height: 22px; border-radius: 999px;
       display: inline-flex; align-items: center; justify-content: center;
@@ -48,12 +48,10 @@
       background: #e2e8f0; color: #64748b;
       transition: background 0.12s, color 0.12s;
     }
-    .sidebar-stage.active .sidebar-num { background: #d97706; color: #fff; }
     .sidebar-label {
       font-size: 12px; font-weight: 500; color: #64748b; line-height: 1.3;
       white-space: nowrap;
     }
-    .sidebar-stage.active .sidebar-label { color: #92400e; font-weight: 600; }
 
     .prep-panel {
       border: 1.5px solid #d97706; border-radius: 10px;
@@ -363,6 +361,122 @@
       const C = LucideReact[n];
       return C ? <C size={size} color={color} style={style} strokeWidth={2} /> : null;
     };
+
+    /* ── Workshop Mode visual (welcome + prep) ──────────── */
+    function ResponseWorkshopVisual() {
+      const EvaluatePreview = () => (
+        <div style={{display:'flex',flexDirection:'column',gap:2,marginTop:5}}>
+          {[
+            ['Escalation Signal','High','#b91c1c','#fee2e2'],
+            ['Business Impact',  'High','#c2410c','#ffedd5'],
+            ['Urgency',          'Med', '#92400e','#fef9c3'],
+          ].map(([sig,risk,tc,bg],i)=>(
+            <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'2px 6px',borderRadius:3,background:bg,fontSize:10}}>
+              <span style={{color:'#1f2328'}}>{sig}</span>
+              <span style={{color:tc,fontWeight:700}}>{risk}</span>
+            </div>
+          ))}
+        </div>
+      );
+
+      const DraftPreview = () => (
+        <div style={{display:'flex',flexDirection:'column',gap:2,marginTop:5}}>
+          {[
+            ['1','Escalation →','Name path explicitly','#6d28d9'],
+            ['2','Urgency →',   'Concrete date',       '#92400e'],
+            ['3','Sentiment →', 'Empathy first',       '#b91c1c'],
+          ].map(([n,sig,move,c],i)=>(
+            <div key={i} style={{display:'flex',gap:4,alignItems:'center',fontSize:10}}>
+              <span style={{color:'#94a3b8',fontWeight:700,width:12}}>{n}</span>
+              <span style={{color:c,fontWeight:600}}>{sig}</span>
+              <span style={{color:'#64748b'}}>{move}</span>
+            </div>
+          ))}
+        </div>
+      );
+
+      const CriticizePreview = () => (
+        <div style={{display:'flex',flexDirection:'column',gap:2,marginTop:5}}>
+          {[
+            ['Escalation Signal','Addressed','#15803d','#dcfce7'],
+            ['Urgency',          'Partial',  '#92400e','#fef9c3'],
+            ['Unmet Expect.',    'Missing',  '#b91c1c','#fee2e2'],
+          ].map(([sig,status,tc,bg],i)=>(
+            <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'2px 6px',borderRadius:3,background:bg,fontSize:10}}>
+              <span style={{color:'#1f2328'}}>{sig}</span>
+              <span style={{color:tc,fontWeight:700}}>{status}</span>
+            </div>
+          ))}
+        </div>
+      );
+
+      const steps = [
+        {n:4,label:'Evaluate', color:'#d97706',bg:'#fffbeb',border:'#fde68a',visual:'Risk table',    Preview:EvaluatePreview},
+        {n:5,label:'Draft',    color:'#15803d',bg:'#f0fdf4',border:'#86efac',visual:'Signal mapping', Preview:DraftPreview},
+        {n:6,label:'Criticize',color:'#6d28d9',bg:'#faf5ff',border:'#ddd6fe',visual:'Coverage check',Preview:CriticizePreview},
+      ];
+
+      return (
+        <div style={{display:'flex',gap:16,alignItems:'flex-start',padding:'8px 0',userSelect:'none',width:'100%'}}>
+
+          {/* Left — WITHOUT WORKSHOP */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:6}}>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#94a3b8',marginBottom:2}}>WITHOUT WORKSHOP</div>
+
+            {/* Customer message lines */}
+            <div style={{background:'#f1f5f9',borderRadius:6,padding:'7px 10px'}}>
+              <div style={{fontSize:9,fontWeight:700,color:'#94a3b8',marginBottom:4}}>customer message</div>
+              {[92,78,85,60,72,88,45].map((w,i)=>(
+                <div key={i} style={{height:6,borderRadius:2,background:'#cbd5e1',width:`${w}%`,marginBottom:3}} />
+              ))}
+            </div>
+
+            {/* Draft attempt 1 — abandoned */}
+            <div style={{background:'#fff0f0',borderRadius:6,padding:'7px 10px',border:'1px solid #fecaca'}}>
+              <div style={{fontSize:9,fontWeight:700,color:'#ef4444',marginBottom:4}}>draft attempt 1 ✗</div>
+              {[80,65,90,55].map((w,i)=>(
+                <div key={i} style={{height:5,borderRadius:2,background:'#fca5a5',width:`${w}%`,marginBottom:3,opacity:0.7}} />
+              ))}
+            </div>
+
+            {/* Draft attempt 2 — still not right */}
+            <div style={{background:'#fffbeb',borderRadius:6,padding:'7px 10px',border:'1px solid #fde68a'}}>
+              <div style={{fontSize:9,fontWeight:700,color:'#d97706',marginBottom:4}}>draft attempt 2…</div>
+              {[70,84,50,76,62].map((w,i)=>(
+                <div key={i} style={{height:5,borderRadius:2,background:'#fcd34d',width:`${w}%`,marginBottom:3,opacity:0.8}} />
+              ))}
+            </div>
+
+            <div style={{display:'flex',alignItems:'center',gap:6,padding:'4px 0'}}>
+              <span style={{fontSize:11,color:'#64748b'}}>↕</span>
+              <span style={{fontSize:10,color:'#94a3b8',fontStyle:'italic'}}>keep rewriting… 30 min lost</span>
+            </div>
+          </div>
+
+          {/* Arrow */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,paddingTop:40,minWidth:68}}>
+            <div style={{fontSize:16,color:'#d97706',fontWeight:700}}>→</div>
+            <div style={{fontSize:9,fontWeight:700,color:'#d97706',letterSpacing:'0.07em',textTransform:'uppercase',textAlign:'center',lineHeight:1.4}}>WORKSHOP<br/>MODE</div>
+          </div>
+
+          {/* Right — WITH WORKSHOP */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:6}}>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#94a3b8',marginBottom:2}}>WITH WORKSHOP — structured steps</div>
+            {steps.map(s=>(
+              <div key={s.n} style={{padding:'7px 10px',borderRadius:7,background:s.bg,border:`1px solid ${s.border}`}}>
+                <div style={{display:'flex',alignItems:'center',gap:7}}>
+                  <div style={{width:20,height:20,borderRadius:'50%',background:s.color,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:10,fontWeight:700,flexShrink:0}}>{s.n}</div>
+                  <div style={{flex:1,fontSize:12,color:s.color,fontWeight:700}}>{s.label}</div>
+                  <div style={{fontSize:9,color:'#94a3b8'}}>{s.visual}</div>
+                </div>
+                <s.Preview />
+              </div>
+            ))}
+            <div style={{fontSize:9,color:'#94a3b8',fontStyle:'italic',marginTop:2,textAlign:'right'}}>structured output → AI chat · no guessing</div>
+          </div>
+        </div>
+      );
+    }
 
     /* ── Signal detection visual ─────────────────────────── */
     function EvaluateVisual() {
@@ -1008,17 +1122,26 @@ A single self-contained HTML file with inline CSS only. Must follow these rules:
             <button
               className={`sidebar-stage${activeStage === "prep" ? " active" : ""}`}
               onClick={() => setActiveStage(prev => prev === "prep" ? null : "prep")}
+              title="Workshop Preparation"
             >
-              <span className="sidebar-num" style={activeStage==="prep"?{background:'#d97706'}:{}}><Ic n="BookOpen" size={10} color={activeStage==="prep"?"#fff":"#64748b"} /></span>
+              <span className="sidebar-num" style={activeStage==="prep"?{background:'#d97706'}:{}}>
+                <Ic n="BookOpen" size={10} color={activeStage==="prep"?"#fff":"#64748b"} />
+              </span>
               <span className="sidebar-label">Preparation</span>
             </button>
-            <div style={{height:8}} />
-            {STAGES.map((stage) => (
-              <button key={stage.id} className={`sidebar-stage${activeStage === stage.id ? " active" : ""}`}
-                onClick={() => toggleStage(stage.id)}>
-                <span className="sidebar-num" style={activeStage===stage.id?{background:stage.color}:{}}
-                  >{stage.stepNum}</span>
-                <span className="sidebar-label">{stage.label}</span>
+            <div style={{height:6,borderBottom:'1px solid #e2e8f0',margin:'4px 12px 6px'}} />
+            {STAGES.map((stage, i) => (
+              <button key={stage.id}
+                className={`sidebar-stage${activeStage === stage.id ? " active" : ""}`}
+                style={activeStage===stage.id?{borderLeftColor:stage.color,background:stage.bg}:{}}
+                onClick={() => toggleStage(stage.id)}
+              >
+                <span className="sidebar-num"
+                  style={activeStage===stage.id?{background:stage.color,color:'#fff'}:{}}
+                >{stage.stepNum}</span>
+                <span className="sidebar-label"
+                  style={activeStage===stage.id?{color:stage.color,fontWeight:600}:{}}
+                >{stage.label}</span>
               </button>
             ))}
           </div>
@@ -1028,31 +1151,15 @@ A single self-contained HTML file with inline CSS only. Must follow these rules:
 
             {/* Welcome */}
             {activeStage === null && (
-              <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,padding:'60px 20px',textAlign:'center'}}>
-                <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
-                  <div style={{width:52,height:52,borderRadius:14,background:'#fffbeb',border:'2px solid #fde68a',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                    <Ic n="MessageSquareDiff" size={26} color="#d97706" />
-                  </div>
-                  <div style={{fontSize:22,fontWeight:700,color:'#1f2328'}}>L3 Response Workshop</div>
-                  <div style={{fontSize:13,color:'#64748b',maxWidth:480,lineHeight:1.6}}>
-                    A 3-step AI-assisted workflow for customer-facing responses. Annotate the customer message with signals, then evaluate risk, draft a response, and criticize the draft before sending.
-                  </div>
-                </div>
-                <div style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:'center'}}>
-                  {[
-                    {icon:'ScanSearch',label:'Step 4: Evaluate',color:'#d97706',bg:'#fffbeb',id:'evaluate'},
-                    {icon:'PenLine',label:'Step 5: Draft',color:'#15803d',bg:'#f0fdf4',id:'draft'},
-                    {icon:'ShieldCheck',label:'Step 6: Criticize',color:'#6d28d9',bg:'#faf5ff',id:'criticize'},
-                  ].map(s=>(
-                    <div key={s.id} onClick={()=>setActiveStage(s.id)} style={{cursor:'pointer',display:'flex',alignItems:'center',gap:8,padding:'10px 18px',borderRadius:10,background:s.bg,border:`1.5px solid`,borderColor:s.bg,boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>
-                      <Ic n={s.icon} size={16} color={s.color} />
-                      <span style={{fontSize:13,fontWeight:600,color:s.color}}>{s.label}</span>
-                    </div>
-                  ))}
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:20,padding:'20px 0 40px'}}>
+                <ResponseWorkshopVisual />
+                <div style={{fontSize:22,fontWeight:700,color:'#1f2328',textAlign:'center'}}>L3 AI Response Workshop</div>
+                <div style={{fontSize:13,color:'#64748b',maxWidth:500,lineHeight:1.6,textAlign:'center'}}>
+                  A 3-step structured workflow for customer-facing responses — from signal annotation to a polished, empathy-first reply. Use the step prompts to drive your AI session.
                 </div>
                 <button
                   onClick={() => setActiveStage("prep")}
-                  style={{background:'#d97706',color:'#fff',border:'none',borderRadius:10,padding:'12px 32px',fontSize:14,fontWeight:700,cursor:'pointer',letterSpacing:'0.01em'}}
+                  style={{background:'#d97706',color:'#fff',border:'none',borderRadius:10,padding:'12px 32px',fontSize:14,fontWeight:700,cursor:'pointer',boxShadow:'0 2px 12px rgba(217,119,6,0.4)',letterSpacing:'0.01em'}}
                   onMouseOver={e=>e.target.style.background='#b45309'}
                   onMouseOut={e=>e.target.style.background='#d97706'}
                 >
@@ -1068,6 +1175,16 @@ A single self-contained HTML file with inline CSS only. Must follow these rules:
                 <div className="prep-hint">
                   Paste this prompt once at the start of your Cursor or Claude session. The AI will remember the routing rules for all 3 steps.
                 </div>
+
+                {/* Workshop mode visual */}
+                <details className="light-details">
+                  <summary className="light-summary">
+                    What workshop mode does <span className="light-hint">(visual)</span>
+                  </summary>
+                  <div style={{marginTop:10}}>
+                    <ResponseWorkshopVisual />
+                  </div>
+                </details>
 
                 {/* Setup reference */}
                 <div className="prep-block">
