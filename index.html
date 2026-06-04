@@ -1046,6 +1046,104 @@ A single self-contained HTML file with inline CSS only. Must follow these rules:
 - Tables: alternating row shading (#f8fafc), colored left-border per row for status
 - Font: system-ui, 13px body, bold section headers`;
 
+    /* ── Scenario Generator data ─────────────────────────── */
+    const SCENARIOS = [
+      { id: "",              label: "Random (AI picks)" },
+      { id: "urgent_issue",  label: "Urgent issue" },
+      { id: "call_request",  label: "Call request" },
+      { id: "dsat",          label: "DSAT" },
+      { id: "missing_info",  label: "Missing info" },
+      { id: "out_of_scope",  label: "Out of scope" },
+      { id: "ai_ticket",     label: "AI-written ticket" },
+      { id: "redirect",      label: "Team redirect" },
+    ];
+
+    const PRODUCT_AREAS = [
+      { id: "",               label: "Random (AI picks)" },
+      { id: "APM",            label: "APM" },
+      { id: "Log Management", label: "Log Management" },
+      { id: "Agent",          label: "Agent" },
+      { id: "Metrics",        label: "Metrics" },
+      { id: "Dashboards",     label: "Dashboards" },
+      { id: "Infrastructure", label: "Infrastructure" },
+      { id: "Synthetics",     label: "Synthetics" },
+      { id: "RUM",            label: "RUM" },
+      { id: "DBM",            label: "DBM" },
+      { id: "NPM",            label: "NPM" },
+    ];
+
+    function buildScenarioPrompt(scenario, product) {
+      const scenarioLine = scenario ? `- Scenario: ${SCENARIOS.find(s=>s.id===scenario)?.label ?? scenario}` : `- Scenario: (random)`;
+      const productLine  = product  ? `- Product area: ${product}` : `- Product area: (random)`;
+      return `You are generating a realistic customer support message for a Datadog TSE workshop exercise.
+
+Pick a random scenario from: urgent issue / call request / DSAT / missing info / out of scope / AI-written ticket / team redirect
+Pick a random product area from: APM, Log Management, Agent, Metrics, Dashboards, Infrastructure, Synthetics, RUM, DBM, NPM
+
+Optional overrides (leave blank to keep random):
+${scenarioLine}
+${productLine}
+
+Generate a realistic customer message that fits the scenario and product area.
+Make the message specific to the product area -- mention real config keys, feature names, or workflows where relevant.
+
+Write 5-8 short sentences, one per line.
+Each sentence must carry exactly one signal. Do not combine signals.
+Possible signals: Sentiment / Urgency / Timeline Pressure / Business Impact / Unmet Expectation / Escalation Signal / Context / Request
+
+Output the customer message only -- no explanation, no signal labels.`;
+    }
+
+    function ScenarioGameVisual() {
+      const scenarios = [
+        {label:'Urgent issue',     signals:['Urgency','Business Impact','Request'],                          color:'#c2410c',bg:'#fff7ed'},
+        {label:'DSAT',             signals:['Sentiment','Unmet Expectation','Escalation Signal'],            color:'#b91c1c',bg:'#fff0f0'},
+        {label:'Call request',     signals:['Urgency','Context','Request'],                                  color:'#1d4ed8',bg:'#eff6ff'},
+        {label:'AI-written ticket',signals:['Context','Request'],                                            color:'#475569',bg:'#f8fafc'},
+      ];
+      return (
+        <div style={{display:'flex',gap:14,alignItems:'flex-start',padding:'10px 0',fontSize:12,userSelect:'none'}}>
+          {/* Left — raw scenario */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:5}}>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#94a3b8',marginBottom:2}}>ANY SCENARIO</div>
+            {scenarios.map((s,i)=>(
+              <div key={i} style={{padding:'5px 8px',borderRadius:6,background:s.bg,border:`1px solid ${s.color}20`}}>
+                <div style={{fontSize:11,fontWeight:600,color:s.color,marginBottom:3}}>{s.label}</div>
+                <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                  {s.signals.map((sig,j)=>(
+                    <span key={j} style={{fontSize:9,padding:'1px 5px',borderRadius:999,background:'#fff',border:`1px solid ${s.color}40`,color:s.color}}>{sig}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Arrow */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,paddingTop:28,minWidth:56}}>
+            <div style={{fontSize:14,color:'#0891b2',fontWeight:700}}>→</div>
+            <div style={{fontSize:9,fontWeight:700,color:'#0891b2',letterSpacing:'0.07em',textTransform:'uppercase',textAlign:'center',lineHeight:1.4}}>SCENARIO<br/>GAME</div>
+          </div>
+          {/* Right — same 3-step flow */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:5}}>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#94a3b8',marginBottom:2}}>SAME 3-STEP FLOW</div>
+            {[
+              {n:4,label:'Evaluate',color:'#d97706',note:'Detect signals · Rate risk'},
+              {n:5,label:'Draft',   color:'#15803d',note:'Map moves · Write response'},
+              {n:6,label:'Criticize',color:'#6d28d9',note:'Coverage · Best edit'},
+            ].map((s,i)=>(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:7,padding:'5px 8px',borderRadius:6,background:'#f8fafc',border:'1px solid #e2e8f0'}}>
+                <div style={{width:18,height:18,borderRadius:'50%',background:s.color,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:9,fontWeight:700,flexShrink:0}}>{s.n}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:11,fontWeight:600,color:s.color}}>{s.label}</div>
+                  <div style={{fontSize:9,color:'#94a3b8'}}>{s.note}</div>
+                </div>
+              </div>
+            ))}
+            <div style={{fontSize:9,color:'#94a3b8',fontStyle:'italic',marginTop:2}}>methodology is constant · scenario changes</div>
+          </div>
+        </div>
+      );
+    }
+
     /* ── App ────────────────────────────────────────────── */
     function App() {
       const [raw, setRaw] = useState(DEFAULT_TEXT);
@@ -1061,6 +1159,8 @@ A single self-contained HTML file with inline CSS only. Must follow these rules:
       const [copiedStage, setCopiedStage] = useState(null);
       const [tool, setTool] = useState("cursor");
       const [promptTab, setPromptTab] = useState("goal");
+      const [scenario, setScenario] = useState("");
+      const [product, setProduct] = useState("");
       useEffect(() => { setPromptTab("goal"); }, [activeStage]);
 
       function toggleStage(id) {
@@ -1128,6 +1228,16 @@ A single self-contained HTML file with inline CSS only. Must follow these rules:
                 <Ic n="BookOpen" size={10} color={activeStage==="prep"?"#fff":"#64748b"} />
               </span>
               <span className="sidebar-label">Preparation</span>
+            </button>
+            <button
+              className={`sidebar-stage${activeStage === "scenarios" ? " active" : ""}`}
+              onClick={() => setActiveStage(prev => prev === "scenarios" ? null : "scenarios")}
+              title="Scenario Generator"
+            >
+              <span className="sidebar-num" style={activeStage==="scenarios"?{background:'#0891b2',color:'#fff'}:{}}>
+                <Ic n="Dices" size={10} color={activeStage==="scenarios"?"#fff":"#64748b"} />
+              </span>
+              <span className="sidebar-label">Scenarios</span>
             </button>
             <div style={{height:6,borderBottom:'1px solid #e2e8f0',margin:'4px 12px 6px'}} />
             {STAGES.map((stage, i) => (
@@ -1241,8 +1351,90 @@ A single self-contained HTML file with inline CSS only. Must follow these rules:
               </div>
             )}
 
+            {/* Scenarios panel */}
+            {activeStage === "scenarios" && (
+              <div style={{border:'1.5px solid #a5f3fc',borderRadius:10,background:'#ecfeff',padding:'14px 16px',display:'flex',flexDirection:'column',gap:14}}>
+                <div style={{fontSize:14,fontWeight:700,color:'#0e7490'}}>Scenario Generator</div>
+                <div style={{fontSize:12,color:'#155e75',lineHeight:1.6}}>
+                  Pick a scenario and product area, copy the prompt into your AI session, and practice the full Evaluate → Draft → Criticize flow on the generated message.
+                  The methodology is constant — only the customer context changes.
+                </div>
+
+                {/* Visual */}
+                <details className="light-details">
+                  <summary className="light-summary">
+                    What the scenario game does <span className="light-hint">(visual)</span>
+                  </summary>
+                  <div style={{marginTop:10}}>
+                    <ScenarioGameVisual />
+                  </div>
+                </details>
+
+                <hr className="divider" />
+
+                {/* Scenario picker */}
+                <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                  <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.07em',textTransform:'uppercase',color:'#0891b2'}}>Choose Scenario</div>
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                    {SCENARIOS.map(s=>(
+                      <button key={s.id} onClick={()=>setScenario(s.id)} style={{
+                        cursor:'pointer',border:'1.5px solid',borderRadius:999,
+                        padding:'4px 12px',fontSize:11,fontWeight:600,
+                        background: scenario===s.id ? '#0891b2' : '#fff',
+                        color:       scenario===s.id ? '#fff'     : '#475569',
+                        borderColor: scenario===s.id ? '#0891b2'  : '#d0d7de',
+                        transition:'all 0.12s',
+                      }}>{s.label}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Product area picker */}
+                <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                  <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.07em',textTransform:'uppercase',color:'#0891b2'}}>Choose Product Area</div>
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                    {PRODUCT_AREAS.map(p=>(
+                      <button key={p.id} onClick={()=>setProduct(p.id)} style={{
+                        cursor:'pointer',border:'1.5px solid',borderRadius:999,
+                        padding:'4px 12px',fontSize:11,fontWeight:600,
+                        background: product===p.id ? '#0891b2' : '#fff',
+                        color:       product===p.id ? '#fff'    : '#475569',
+                        borderColor: product===p.id ? '#0891b2' : '#d0d7de',
+                        transition:'all 0.12s',
+                      }}>{p.label}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <hr className="divider" />
+
+                {/* Generated prompt */}
+                <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                  <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.07em',textTransform:'uppercase',color:'#0891b2'}}>Generation Prompt — paste into AI chat</div>
+                  <div className="stage-prompt-wrap">
+                    <pre className="stage-prompt" style={{fontSize:11,background:'#f0fdfe',borderColor:'#a5f3fc'}}>
+                      {buildScenarioPrompt(scenario, product)}
+                    </pre>
+                    <button className="stage-copy-btn" onClick={()=>{
+                      navigator.clipboard.writeText(buildScenarioPrompt(scenario, product))
+                        .then(()=>{setCopiedStage("scenario");setTimeout(()=>setCopiedStage(null),2000);});
+                    }}>
+                      {copiedStage==="scenario" ? "✓ Copied!" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Next step hint */}
+                <div style={{background:'#f0fdfe',border:'1px solid #a5f3fc',borderRadius:8,padding:'10px 14px',fontSize:12,color:'#155e75',lineHeight:1.6}}>
+                  <strong>How to use:</strong> Paste the prompt above into your AI session →
+                  the AI returns a realistic customer message →
+                  paste that message into <button onClick={()=>setActiveStage("evaluate")} style={{background:'none',border:'none',cursor:'pointer',color:'#d97706',fontWeight:700,textDecoration:'underline',fontSize:12,padding:0}}>Step 4 (Evaluate)</button> and annotate signals → run the full 3-step flow.
+                </div>
+              </div>
+            )}
+
             {/* Customer message + stages */}
-            {activeStage !== "prep" && activeStage !== null && (
+            {activeStage !== "prep" && activeStage !== "scenarios" && activeStage !== null && (
               <>
                 {/* ── Annotation panel (always shown for Evaluate; collapsed for Draft/Criticize) ── */}
                 {activeStage === "evaluate" ? (
