@@ -610,92 +610,6 @@
         graphic: CriticizeVisual },
     };
 
-    /* ── Visual hint mini-components ─────────────────────── */
-    const HV = {
-      Contrast: ({bad, good}) => (
-        <div style={{display:'flex',flexDirection:'column',gap:4,fontSize:12}}>
-          <div style={{color:'#b91c1c'}}>✗ {bad}</div>
-          <div style={{color:'#15803d'}}>✓ {good}</div>
-        </div>
-      ),
-      Table: ({rows, cols}) => (
-        <table style={{fontSize:11,borderCollapse:'collapse',width:'100%'}}>
-          {cols && <thead><tr>{cols.map((c,i)=><th key={i} style={{textAlign:'left',padding:'2px 6px',color:'#94a3b8',fontWeight:700,fontSize:10}}>{c}</th>)}</tr></thead>}
-          <tbody>{rows.map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j} style={{padding:'2px 6px',color:'#475569'}}>{cell}</td>)}</tr>)}</tbody>
-        </table>
-      ),
-      Priority: ({rows}) => (
-        <div style={{display:'flex',flexDirection:'column',gap:3}}>
-          {rows.map(([n,signal,color],i)=>(
-            <div key={i} style={{display:'flex',alignItems:'center',gap:6,fontSize:11}}>
-              <span style={{width:16,fontWeight:700,color:'#94a3b8'}}>{n}</span>
-              <span style={{color}}>{signal}</span>
-            </div>
-          ))}
-        </div>
-      ),
-    };
-
-    const STAGE_VISUAL_HINTS = {
-      evaluate: [
-        () => <HV.Contrast
-          bad="Anchor on the most obvious signal immediately"
-          good="List ALL signals present before assigning a dominant one" />,
-        () => <HV.Priority rows={[
-          ['1','Escalation Signal','#6d28d9'],
-          ['2','Business Impact','#c2410c'],
-          ['3','Urgency','#b45309'],
-          ['4','Unmet Expectation','#9d174d'],
-          ['5','Negative Sentiment','#b91c1c'],
-        ]} />,
-        () => <HV.Table cols={['Risk','Criteria']} rows={[
-          ['High','Escalation Signal present, OR Business Impact + Urgency together'],
-          ['Medium','Unmet Expectation, OR Urgency without Business Impact'],
-          ['Low','Sentiment only, OR Context/Request with no urgency signals'],
-        ]} />,
-        () => <HV.Contrast
-          bad="\"I'll look into this\" (vague, no action)"
-          good="\"Yes — I am looping in [AE name] on this thread now\" (named, immediate)" />,
-      ],
-      draft: [
-        () => <HV.Table cols={['Signal','Required move']} rows={[
-          ['Escalation Signal','Name the path explicitly — do not soften it'],
-          ['Business Impact','Confirm understanding + state priority level'],
-          ['Urgency','Concrete timeline — date or time window, never "soon"'],
-          ['Unmet Expectation','Own the gap directly — no deflection'],
-          ['Sentiment','Empathy before any technical content'],
-        ]} />,
-        () => <HV.Contrast
-          bad="\"We will resolve this as soon as possible\""
-          good="\"I will send you an update by Thursday 17:00 CET with a resolution timeline\"" />,
-        () => <HV.Table cols={['Filler phrase','Why it fails']} rows={[
-          ['"I hope this finds you well"','Ignores visible urgency'],
-          ['"As per my previous email"','Deflects — makes the customer feel blamed'],
-          ['"Please don\'t hesitate to reach out"','Vague — no concrete action offered'],
-          ['"I understand your frustration"','Empathy theater if not followed by action'],
-        ]} />,
-        () => <HV.Contrast
-          bad="\"We are looking into this\" (no timeline)"
-          good="\"I am escalating this to our team and will reply with findings by EOD tomorrow\"" />,
-      ],
-      criticize: [
-        () => <HV.Contrast
-          bad="Fix phrasing first (cosmetic)"
-          good="Check signal coverage first — a gap is worse than a filler phrase" />,
-        () => <HV.Contrast
-          bad="Opening: \"Thank you for reaching out. I'll investigate the APM issue...\""
-          good="Opening: \"I understand how disruptive this is — let me address each point directly.\"" />,
-        () => <HV.Table cols={['Pattern','Replacement']} rows={[
-          ['"As per my previous email"','"As I mentioned on [date],"'],
-          ['"Please don\'t hesitate"','"Reply here and I\'ll respond within [time]"'],
-          ['"ASAP"','"by [concrete date/time]"'],
-          ['"Looking into it"','"I\'ll have an update by [time]"'],
-        ]} />,
-        () => <HV.Contrast
-          bad="Propose 3 edits at once"
-          good="State the SINGLE edit that closes the largest signal gap" />,
-      ],
-    };
 
     /* ── Stage definitions ──────────────────────────────── */
     const L3_STAGES = [
@@ -1557,28 +1471,12 @@ Output the customer message only -- no explanation, no signal labels.`;
                       {stage.steps && (
                         <div className="checklist">
                           <div className="checklist-label">Checklist</div>
-                          {stage.steps.map((step, i) => {
-                            const hintFn = STAGE_VISUAL_HINTS[stage.id] && STAGE_VISUAL_HINTS[stage.id][i];
-                            return (
-                              <div key={i} className="checklist-item">
-                                {hintFn ? (
-                                  <details className="hint-toggle" style={{width:'100%'}}>
-                                    <summary>
-                                      <span className="checklist-dot" />
-                                      <span>{step}</span>
-                                      <span className="hint-icon"><Ic n="ChevronDown" size={12} /></span>
-                                    </summary>
-                                    <div className="hint-visual">{hintFn()}</div>
-                                  </details>
-                                ) : (
-                                  <>
-                                    <span className="checklist-dot" />
-                                    <span>{step}</span>
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })}
+                          {stage.steps.map((step, i) => (
+                            <div key={i} className="checklist-item">
+                              <span className="checklist-dot" />
+                              <span>{step}</span>
+                            </div>
+                          ))}
                         </div>
                       )}
 
