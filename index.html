@@ -354,7 +354,14 @@
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel" data-presets="env,react">
+  <script>
+    window.onerror = function(msg, src, line, col, err) {
+      document.getElementById('root').innerHTML =
+        '<pre style="color:red;padding:24px;font-size:13px;white-space:pre-wrap">JS ERROR:\n' +
+        msg + '\nLine: ' + line + '\n' + (err ? err.stack : '') + '</pre>';
+    };
+  </script>
+  <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
     const Ic = ({ n, size=13, color, style }) => {
@@ -854,7 +861,7 @@ OUTPUT FORMAT:
     function generatePromptBlock(lines, tags, elements) {
       const entries = [];
       for (const line of lines) {
-        const lineTags = tags[line.id] || [];
+        const lineTags = tags[line.id] ?? [];
         const text = lineText(line);
         if (lineTags.length === 0) {
           entries.push({ labels: [], text });
@@ -1199,7 +1206,7 @@ Output the customer message only -- no explanation, no signal labels.`;
         if (!dragging) return;
         setTags(prev => ({
           ...prev,
-          [lineId]: [...(prev[lineId] || []), { uid: nextUid(), elementId: dragging }],
+          [lineId]: [...(prev[lineId] ?? []), { uid: nextUid(), elementId: dragging }],
         }));
         setDragging(null); setOver(null);
       }
@@ -1207,12 +1214,12 @@ Output the customer message only -- no explanation, no signal labels.`;
       function removeTag(lineId, uid) {
         setTags(prev => ({
           ...prev,
-          [lineId]: (prev[lineId] || []).filter(t => t.uid !== uid),
+          [lineId]: (prev[lineId] ?? []).filter(t => t.uid !== uid),
         }));
       }
 
       const totalTags = Object.values(tags).flat().length;
-      const activeStageObj = STAGES.find(function(s){ return s.id === activeStage; }) || null;
+      const activeStageObj = STAGES.find(s => s.id === activeStage) ?? null;
 
       return (
         <div className="app">
@@ -1488,7 +1495,7 @@ Output the customer message only -- no explanation, no signal labels.`;
                           <div className="section-label" style={{marginBottom:8}}>Customer Message</div>
                           <div style={{display:'flex',flexDirection:'column',gap:2}}>
                             {lines.map(line => {
-                              const lineTags = tags[line.id] || [];
+                              const lineTags = tags[line.id] ?? [];
                               const isOver = over === line.id;
                               const topEl = lineTags[0] ? ELEMENTS.find(e => e.id === lineTags[0].elementId) : null;
                               const toneClass = topEl && !isOver ? `has-${topEl.tone}` : "";
