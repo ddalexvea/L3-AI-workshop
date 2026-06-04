@@ -675,8 +675,8 @@
           ['Low','Sentiment only, OR Context/Request with no urgency signals'],
         ]} />,
         () => <HV.Contrast
-          bad="\"I'll look into this\" (vague, no action)"
-          good="\"Yes — I am looping in [AE name] on this thread now\" (named, immediate)" />,
+          bad="&quot;I'll look into this&quot; (vague, no action)"
+          good="&quot;Yes — I am looping in [AE name] on this thread now&quot; (named, immediate)" />,
       ],
       draft: [
         () => <HV.Table cols={['Signal','Required move']} rows={[
@@ -687,8 +687,8 @@
           ['Sentiment','Empathy before any technical content'],
         ]} />,
         () => <HV.Contrast
-          bad="\"We will resolve this as soon as possible\""
-          good="\"I will send you an update by Thursday 17:00 CET with a resolution timeline\"" />,
+          bad="&quot;We will resolve this as soon as possible&quot;"
+          good="&quot;I will send you an update by Thursday 17:00 CET with a resolution timeline&quot;" />,
         () => <HV.Table cols={['Filler phrase','Why it fails']} rows={[
           ['"I hope this finds you well"','Ignores visible urgency'],
           ['"As per my previous email"','Deflects — makes the customer feel blamed'],
@@ -696,16 +696,16 @@
           ['"I understand your frustration"','Empathy theater if not followed by action'],
         ]} />,
         () => <HV.Contrast
-          bad="\"We are looking into this\" (no timeline)"
-          good="\"I am escalating this to our team and will reply with findings by EOD tomorrow\"" />,
+          bad="&quot;We are looking into this&quot; (no timeline)"
+          good="&quot;I am escalating this to our team and will reply with findings by EOD tomorrow&quot;" />,
       ],
       criticize: [
         () => <HV.Contrast
           bad="Fix phrasing first (cosmetic)"
           good="Check signal coverage first — a gap is worse than a filler phrase" />,
         () => <HV.Contrast
-          bad="Opening: \"Thank you for reaching out. I'll investigate the APM issue...\""
-          good="Opening: \"I understand how disruptive this is — let me address each point directly.\"" />,
+          bad="Opening: &quot;Thank you for reaching out. I'll investigate the APM issue...&quot;"
+          good="Opening: &quot;I understand how disruptive this is — let me address each point directly.&quot;" />,
         () => <HV.Table cols={['Pattern','Replacement']} rows={[
           ['"As per my previous email"','"As I mentioned on [date],"'],
           ['"Please don\'t hesitate"','"Reply here and I\'ll respond within [time]"'],
