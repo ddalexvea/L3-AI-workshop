@@ -97,27 +97,6 @@
       width: 5px; height: 5px; border-radius: 999px;
       background: #cbd5e1; flex-shrink: 0; margin-top: 6px;
     }
-    .hint-toggle { margin-top: 0; }
-    .hint-toggle summary {
-      display: flex; align-items: flex-start; gap: 8px;
-      font-size: 12px; color: #475569; line-height: 1.5;
-      list-style: none; cursor: pointer;
-      padding: 2px 0; border-radius: 5px;
-    }
-    .hint-toggle summary::-webkit-details-marker { display: none; }
-    .hint-toggle summary:hover .hint-icon { opacity: 1; }
-    .hint-icon {
-      flex-shrink: 0; margin-left: auto; opacity: 0.35;
-      transition: opacity 0.15s; padding: 2px 4px;
-      border-radius: 4px; margin-top: 2px;
-    }
-    .hint-toggle[open] summary .hint-icon { opacity: 1; color: #d97706; }
-    .hint-toggle[open] summary .hint-icon svg { stroke: #d97706; }
-    .hint-visual {
-      margin-top: 5px; padding: 8px 10px;
-      background: #f8fafc; border: 1px solid #e2e8f0;
-      border-left: 3px solid #fcd34d; border-radius: 0 6px 6px 0;
-    }
 
     .attach-section { display: flex; flex-direction: column; gap: 6px; }
     .attach-section-label {
@@ -675,8 +654,8 @@
           ['Low','Sentiment only, OR Context/Request with no urgency signals'],
         ]} />,
         () => <HV.Contrast
-          bad="&quot;I'll look into this&quot; (vague, no action)"
-          good="&quot;Yes — I am looping in [AE name] on this thread now&quot; (named, immediate)" />,
+          bad="\"I'll look into this\" (vague, no action)"
+          good="\"Yes — I am looping in [AE name] on this thread now\" (named, immediate)" />,
       ],
       draft: [
         () => <HV.Table cols={['Signal','Required move']} rows={[
@@ -687,8 +666,8 @@
           ['Sentiment','Empathy before any technical content'],
         ]} />,
         () => <HV.Contrast
-          bad="&quot;We will resolve this as soon as possible&quot;"
-          good="&quot;I will send you an update by Thursday 17:00 CET with a resolution timeline&quot;" />,
+          bad="\"We will resolve this as soon as possible\""
+          good="\"I will send you an update by Thursday 17:00 CET with a resolution timeline\"" />,
         () => <HV.Table cols={['Filler phrase','Why it fails']} rows={[
           ['"I hope this finds you well"','Ignores visible urgency'],
           ['"As per my previous email"','Deflects — makes the customer feel blamed'],
@@ -696,16 +675,16 @@
           ['"I understand your frustration"','Empathy theater if not followed by action'],
         ]} />,
         () => <HV.Contrast
-          bad="&quot;We are looking into this&quot; (no timeline)"
-          good="&quot;I am escalating this to our team and will reply with findings by EOD tomorrow&quot;" />,
+          bad="\"We are looking into this\" (no timeline)"
+          good="\"I am escalating this to our team and will reply with findings by EOD tomorrow\"" />,
       ],
       criticize: [
         () => <HV.Contrast
           bad="Fix phrasing first (cosmetic)"
           good="Check signal coverage first — a gap is worse than a filler phrase" />,
         () => <HV.Contrast
-          bad="Opening: &quot;Thank you for reaching out. I'll investigate the APM issue...&quot;"
-          good="Opening: &quot;I understand how disruptive this is — let me address each point directly.&quot;" />,
+          bad="Opening: \"Thank you for reaching out. I'll investigate the APM issue...\""
+          good="Opening: \"I understand how disruptive this is — let me address each point directly.\"" />,
         () => <HV.Table cols={['Pattern','Replacement']} rows={[
           ['"As per my previous email"','"As I mentioned on [date],"'],
           ['"Please don\'t hesitate"','"Reply here and I\'ll respond within [time]"'],
