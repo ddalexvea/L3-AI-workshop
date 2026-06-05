@@ -1060,14 +1060,12 @@ Output the customer message only -- no explanation, no signal labels.`;
       const [copiedStage, setCopiedStage] = useState(null);
       const [tool, setTool] = useState("cursor");
       const [promptTab, setPromptTab] = useState("goal");
-      const [showLabel, setShowLabel] = useState(false);
       const [scenario, setScenario] = useState("");
       const [product, setProduct] = useState("");
       useEffect(() => { setPromptTab("goal"); }, [activeStage]);
 
       function toggleStage(id) {
         setActiveStage(prev => prev === id ? null : id);
-        setShowLabel(false);
       }
 
       function buildPromptWithContext(stage, base) {
@@ -1324,49 +1322,21 @@ Output the customer message only -- no explanation, no signal labels.`;
                       </>
                     ) : (
                       <>
-                        {/* Signal palette */}
-                        <div className="row wrap" style={{gap:8,alignItems:'center'}}>
-                          {paletteOpen && ELEMENTS.map(el => (
-                            <span key={el.id}
-                              className={`pill pill-${el.tone} pill-drag${dragging===el.id?" dragging":""}`}
-                              draggable
-                              onDragStart={() => setDragging(el.id)}
-                              onDragEnd={() => { setDragging(null); setOver(null); }}
-                            >{el.label}</span>
-                          ))}
-                          <span className="spacer" />
-                          {totalTags > 0 && (
-                            <span className="count-badge">{totalTags} signal{totalTags!==1?"s":""}</span>
-                          )}
-                          <button className="toggle-btn" onClick={()=>setPaletteOpen(p=>!p)}>
-                            {paletteOpen ? "Hide signals" : "Show signals"}
-                          </button>
-                          <button className="toggle-btn" onClick={()=>setEditing(true)}>Change message</button>
-                          <button className="btn btn-primary" style={{fontSize:12,padding:'5px 12px'}} onClick={()=>{
-                            const text = totalTags > 0 ? generatePromptBlock(lines, tags, ELEMENTS) : raw;
-                            navigator.clipboard.writeText(text);
-                            setCopied(true);
-                            setTimeout(()=>setCopied(false),2000);
-                          }}>
-                            {copied ? "✓ Copied!" : "Copy message"}
-                          </button>
-                        </div>
-
-                        {/* Customer message with drop zones */}
+                        {/* Customer message — plain when palette closed, interactive when open */}
                         <div>
                           <div className="section-label" style={{marginBottom:8}}>Customer Message</div>
                           <div style={{display:'flex',flexDirection:'column',gap:2}}>
                             {lines.map(line => {
                               const lineTags = tags[line.id] ?? [];
-                              const isOver = over === line.id;
-                              const topEl = lineTags[0] ? ELEMENTS.find(e => e.id === lineTags[0].elementId) : null;
+                              const isOver = paletteOpen && over === line.id;
+                              const topEl = paletteOpen && lineTags[0] ? ELEMENTS.find(e => e.id === lineTags[0].elementId) : null;
                               const toneClass = topEl && !isOver ? `has-${topEl.tone}` : "";
                               return (
                                 <div key={line.id}
                                   className={`msg-line ${toneClass}${isOver?" drag-over":""}`}
-                                  onDragOver={e => { e.preventDefault(); setOver(line.id); }}
-                                  onDragLeave={() => setOver(null)}
-                                  onDrop={() => onDrop(line.id)}
+                                  onDragOver={paletteOpen ? e => { e.preventDefault(); setOver(line.id); } : undefined}
+                                  onDragLeave={paletteOpen ? () => setOver(null) : undefined}
+                                  onDrop={paletteOpen ? () => onDrop(line.id) : undefined}
                                 >
                                   {line.type === "text" && <span className="text-sm">{renderInline(line.text)}</span>}
                                   {line.type === "code" && <ConfigRows rows={line.rows} />}
@@ -1376,7 +1346,7 @@ Output the customer message only -- no explanation, no signal labels.`;
                                       <ConfigRows rows={line.rows} />
                                     </>
                                   )}
-                                  {lineTags.length > 0 && (
+                                  {paletteOpen && lineTags.length > 0 && (
                                     <div className="tags-row">
                                       {lineTags.map(tag => {
                                         const el = ELEMENTS.find(e => e.id === tag.elementId);
@@ -1394,6 +1364,38 @@ Output the customer message only -- no explanation, no signal labels.`;
                               );
                             })}
                           </div>
+                        </div>
+
+                        {/* Signal palette + actions — only when open */}
+                        <div className="row wrap" style={{gap:8,alignItems:'center',marginTop:4}}>
+                          {paletteOpen && ELEMENTS.map(el => (
+                            <span key={el.id}
+                              className={`pill pill-${el.tone} pill-drag${dragging===el.id?" dragging":""}`}
+                              draggable
+                              onDragStart={() => setDragging(el.id)}
+                              onDragEnd={() => { setDragging(null); setOver(null); }}
+                            >{el.label}</span>
+                          ))}
+                          <span className="spacer" />
+                          {paletteOpen && totalTags > 0 && (
+                            <span className="count-badge">{totalTags} signal{totalTags!==1?"s":""}</span>
+                          )}
+                          <button className="toggle-btn" onClick={()=>setPaletteOpen(p=>!p)}>
+                            {paletteOpen ? "Hide signals" : "Show signals"}
+                          </button>
+                          {paletteOpen && (
+                            <>
+                              <button className="toggle-btn" onClick={()=>setEditing(true)}>Change message</button>
+                              <button className="btn btn-primary" style={{fontSize:12,padding:'5px 12px'}} onClick={()=>{
+                                const text = totalTags > 0 ? generatePromptBlock(lines, tags, ELEMENTS) : raw;
+                                navigator.clipboard.writeText(text);
+                                setCopied(true);
+                                setTimeout(()=>setCopied(false),2000);
+                              }}>
+                                {copied ? "✓ Copied!" : "Copy message"}
+                              </button>
+                            </>
+                          )}
                         </div>
                       </>
                     )}
@@ -1417,20 +1419,9 @@ Output the customer message only -- no explanation, no signal labels.`;
                       <div style={{display:'flex',alignItems:'center',gap:8}}>
                         {sv && <Ic n={sv.icon} size={16} color={stage.color} />}
                         <div className="stage-title" style={{color:stage.color}}>
-                          Step {stage.stepNum} —{' '}
-                          {showLabel ? (
-                            <>
-                              {stage.label}
-                              {stage.audienceExercise && (
-                                <span style={{marginLeft:10,fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:999,background:'#dcfce7',color:'#15803d'}}>Audience exercise</span>
-                              )}
-                            </>
-                          ) : (
-                            <button onClick={()=>setShowLabel(true)} style={{
-                              border:'1px dashed #cbd5e1',borderRadius:6,padding:'1px 10px',
-                              fontSize:12,fontWeight:600,cursor:'pointer',
-                              background:'#f1f5f9',color:'#94a3b8',letterSpacing:'0.04em',
-                            }}>reveal label</button>
+                          Step {stage.stepNum} — {stage.label}
+                          {stage.audienceExercise && (
+                            <span style={{marginLeft:10,fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:999,background:'#dcfce7',color:'#15803d'}}>Audience exercise</span>
                           )}
                         </div>
                       </div>
