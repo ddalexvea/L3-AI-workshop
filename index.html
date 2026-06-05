@@ -897,30 +897,49 @@ We need a concrete timeline for resolution today, or we will need to involve our
 
     /* ── Session routing prompts ────────────────────────── */
     const CANVAS_SESSION_ROUTING = `CONTEXT:
-You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses. The participant is working through a 3-step response workflow (Evaluate → Draft → Criticize). Your role is to render each step's output as a Cursor canvas file — not to explain or narrate in chat.
+You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses. The participant works through a 3-step workflow: Evaluate → Draft → Criticize. Your role is to render each step's output as a Cursor canvas file. Do not narrate in chat — only write the canvas.
 
 INSTRUCTIONS:
-For every response step prompt the participant sends, produce a Cursor canvas file at:
- ~/Desktop/workshop/l3-step-N.canvas.tsx
-(Replace N with the step number: 4 for Evaluate, 5 for Draft, 6 for Criticize.) Do not output any analysis in chat. In chat, reply only with:
- "Canvas ready — open l3-step-N.canvas.tsx"
+For every step prompt the participant sends, write a canvas file at:
+  ~/Desktop/workshop/l3-step-N.canvas.tsx  (N = 1, 2, or 3)
+In chat reply only with: "Canvas ready — open l3-step-N.canvas.tsx"
 
-Apply the following canvas layout for each step:
-- Step 4 (Evaluate): Risk assessment panel — detected signals table (Signal | Detected | Phrase | Risk contribution, rowTone: danger=High, warning=Med, neutral=Low), dominant signal callout, risk level badge, stakeholder decision row at bottom.
-- Step 5 (Draft): Response blueprint — signal mapping table (Signal | Detected Phrase | Required Move, in priority order), tone approach callout (info), response draft paragraphs (one per signal, bold signal label per paragraph).
-- Step 6 (Criticize): Draft review panel — signal coverage table (Signal | Status | Note, rowTone: success=Addressed, warning=Partial, danger=Missing), filler phrases table (Original | Replacement), opening sentence verdict callout, single best edit diff strip (theme.diff.stripRemoved → theme.diff.stripAdded).
+CANVAS LAYOUT PER STEP:
 
-REASONING:
-Before writing the canvas, identify which step the prompt belongs to, then select the matching layout above.
-Keep every canvas focused: max 7 signal rows, one bold takeaway line at the bottom.
+Step 1 — Evaluate:
+  1. Header row: H1 "Step 1 — Evaluate" + Pill (tone="deleted" active) showing HIGH / MEDIUM / LOW RISK, right-aligned with Spacer
+  2. Signal count strip: Grid columns=4, one Stat per signal type found (value=count, label=signal name, tone: danger for Escalation Signal + Business Impact, warning for Urgency, info for Unmet Expectation, neutral for Sentiment)
+  3. Divider
+  4. H2 "Signal breakdown" + Table — headers: Priority | Signal | Detected phrase — rowTone: danger for Escalation Signal and Business Impact, warning for Urgency, info for Unmet Expectation, neutral for Sentiment
+  5. Divider
+  6. Risk ring + dominant signal: Row containing (a) inline SVG donut ring — 72x72, r=28, stroke=theme token color for risk level, label inside; (b) Stack with H3 "Dominant signal" and Callout (tone matches risk) naming the signal and one-sentence reasoning
+  7. Stakeholder decision Card (collapsible): CardHeader text "Stakeholder involvement" + trailing Pill ("Required" tone=deleted active, or "Not required" tone=neutral); CardBody = Callout with the concrete action the TSE must take
+  8. Anti-anchor Callout (tone="neutral", title="Anti-anchor check"): ask whether first impression missed any signal
 
-OUTPUT FORMAT:
-A single self-contained .canvas.tsx file following these rules exactly:
-- No hardcoded hex colors. Use only useHostTheme() tokens.
-- Valid token paths: theme.accent.primary · theme.fill.primary/secondary/tertiary/quaternary · theme.stroke.primary/secondary/tertiary · theme.text.primary/secondary/tertiary/onAccent · theme.bg.editor/chrome/elevated · theme.diff.stripAdded · theme.diff.stripRemoved
+Step 2 — Draft:
+  1. Header: H1 "Step 2 — Draft" + risk Pill (carry from Step 1)
+  2. Signal-to-move Table — headers: Signal | Required move | Priority — rowTone matches signal tone
+  3. Tone approach Callout (tone="info", title="Tone approach"): state whether to lead with empathy or concrete timeline based on dominant signal
+  4. Response draft: one collapsible Card per paragraph — CardHeader = signal label, CardBody = draft text
+  5. Filler phrase table: headers: Avoid | Use instead — rowTone: danger on Avoid rows; max 4 rows
+  6. Commitment check Callout (tone="warning"): flag any vague commitments still in the draft ("soon", "ASAP", "we'll look into it")
+
+Step 3 — Criticize:
+  1. Header: H1 "Step 3 — Criticize"
+  2. Signal coverage Table — headers: Signal | Status | Note — rowTone: success=Addressed, warning=Partial, danger=Missing
+  3. Opening sentence Callout (tone="success"|"warning"|"danger", title="Opening sentence"): quote the opening sentence and rate it
+  4. Filler phrases Table — headers: Phrase | Why it fails | Replacement — rowTone: danger on all rows
+  5. Best edit: Grid columns=2 — left Callout (tone="danger", title="Remove") + right Callout (tone="success", title="Replace with")
+  6. Facilitator note Callout (tone="info", title="Best single edit"): the one edit that closes the largest signal gap
+
+CANVAS RULES (apply to all steps):
+- Import only from cursor/canvas. No external packages.
+- Use useHostTheme() for all colors. No hardcoded hex values.
+- No box-shadow, no gradients, no emoji as decoration.
 - Table rowTone valid values: "success" | "danger" | "warning" | "info" | "neutral"
 - Pill tone valid values: "neutral" | "added" | "deleted" | "renamed" | "success" | "warning" | "info"
-- No box-shadow, no gradients, no emoji decoration, no hardcoded font sizes above 24px.`;
+- SVG ring: inline SVG arc only — stroke color from useHostTheme() (theme.text.danger / theme.text.warning / theme.text.success resolved at runtime). No chart library.
+- Max 7 rows per signal table. One clear takeaway at the bottom of every canvas.`
 
     const HTML_SESSION_ROUTING = `CONTEXT:
 You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses. The participant is working through a 3-step response workflow (Evaluate → Draft → Criticize). Your role is to render each step's output as a self-contained HTML file — not to explain or narrate in chat.
@@ -1322,21 +1341,49 @@ Output the customer message only -- no explanation, no signal labels.`;
                       </>
                     ) : (
                       <>
-                        {/* Customer message — plain when palette closed, interactive when open */}
+                        {/* Signal palette */}
+                        <div className="row wrap" style={{gap:8,alignItems:'center'}}>
+                          {paletteOpen && ELEMENTS.map(el => (
+                            <span key={el.id}
+                              className={`pill pill-${el.tone} pill-drag${dragging===el.id?" dragging":""}`}
+                              draggable
+                              onDragStart={() => setDragging(el.id)}
+                              onDragEnd={() => { setDragging(null); setOver(null); }}
+                            >{el.label}</span>
+                          ))}
+                          <span className="spacer" />
+                          {totalTags > 0 && (
+                            <span className="count-badge">{totalTags} signal{totalTags!==1?"s":""}</span>
+                          )}
+                          <button className="toggle-btn" onClick={()=>setPaletteOpen(p=>!p)}>
+                            {paletteOpen ? "Hide signals" : "Show signals"}
+                          </button>
+                          <button className="toggle-btn" onClick={()=>setEditing(true)}>Change message</button>
+                          <button className="btn btn-primary" style={{fontSize:12,padding:'5px 12px'}} onClick={()=>{
+                            const text = totalTags > 0 ? generatePromptBlock(lines, tags, ELEMENTS) : raw;
+                            navigator.clipboard.writeText(text);
+                            setCopied(true);
+                            setTimeout(()=>setCopied(false),2000);
+                          }}>
+                            {copied ? "✓ Copied!" : "Copy message"}
+                          </button>
+                        </div>
+
+                        {/* Customer message with drop zones */}
                         <div>
                           <div className="section-label" style={{marginBottom:8}}>Customer Message</div>
                           <div style={{display:'flex',flexDirection:'column',gap:2}}>
                             {lines.map(line => {
                               const lineTags = tags[line.id] ?? [];
-                              const isOver = paletteOpen && over === line.id;
-                              const topEl = paletteOpen && lineTags[0] ? ELEMENTS.find(e => e.id === lineTags[0].elementId) : null;
+                              const isOver = over === line.id;
+                              const topEl = lineTags[0] ? ELEMENTS.find(e => e.id === lineTags[0].elementId) : null;
                               const toneClass = topEl && !isOver ? `has-${topEl.tone}` : "";
                               return (
                                 <div key={line.id}
                                   className={`msg-line ${toneClass}${isOver?" drag-over":""}`}
-                                  onDragOver={paletteOpen ? e => { e.preventDefault(); setOver(line.id); } : undefined}
-                                  onDragLeave={paletteOpen ? () => setOver(null) : undefined}
-                                  onDrop={paletteOpen ? () => onDrop(line.id) : undefined}
+                                  onDragOver={e => { e.preventDefault(); setOver(line.id); }}
+                                  onDragLeave={() => setOver(null)}
+                                  onDrop={() => onDrop(line.id)}
                                 >
                                   {line.type === "text" && <span className="text-sm">{renderInline(line.text)}</span>}
                                   {line.type === "code" && <ConfigRows rows={line.rows} />}
@@ -1346,7 +1393,7 @@ Output the customer message only -- no explanation, no signal labels.`;
                                       <ConfigRows rows={line.rows} />
                                     </>
                                   )}
-                                  {paletteOpen && lineTags.length > 0 && (
+                                  {lineTags.length > 0 && (
                                     <div className="tags-row">
                                       {lineTags.map(tag => {
                                         const el = ELEMENTS.find(e => e.id === tag.elementId);
@@ -1364,38 +1411,6 @@ Output the customer message only -- no explanation, no signal labels.`;
                               );
                             })}
                           </div>
-                        </div>
-
-                        {/* Signal palette + actions — only when open */}
-                        <div className="row wrap" style={{gap:8,alignItems:'center',marginTop:4}}>
-                          {paletteOpen && ELEMENTS.map(el => (
-                            <span key={el.id}
-                              className={`pill pill-${el.tone} pill-drag${dragging===el.id?" dragging":""}`}
-                              draggable
-                              onDragStart={() => setDragging(el.id)}
-                              onDragEnd={() => { setDragging(null); setOver(null); }}
-                            >{el.label}</span>
-                          ))}
-                          <span className="spacer" />
-                          {paletteOpen && totalTags > 0 && (
-                            <span className="count-badge">{totalTags} signal{totalTags!==1?"s":""}</span>
-                          )}
-                          <button className="toggle-btn" onClick={()=>setPaletteOpen(p=>!p)}>
-                            {paletteOpen ? "Hide signals" : "Show signals"}
-                          </button>
-                          {paletteOpen && (
-                            <>
-                              <button className="toggle-btn" onClick={()=>setEditing(true)}>Change message</button>
-                              <button className="btn btn-primary" style={{fontSize:12,padding:'5px 12px'}} onClick={()=>{
-                                const text = totalTags > 0 ? generatePromptBlock(lines, tags, ELEMENTS) : raw;
-                                navigator.clipboard.writeText(text);
-                                setCopied(true);
-                                setTimeout(()=>setCopied(false),2000);
-                              }}>
-                                {copied ? "✓ Copied!" : "Copy message"}
-                              </button>
-                            </>
-                          )}
                         </div>
                       </>
                     )}
