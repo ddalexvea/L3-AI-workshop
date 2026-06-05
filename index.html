@@ -1346,9 +1346,6 @@ Output the customer message only -- no explanation, no signal labels.`;
       }
 
       const totalTags = Object.values(tags).flat().length;
-      const textLines = lines.filter(l => l.type === 'text' || l.type === 'intro-code');
-      const taggedCount = textLines.filter(l => (tags[l.id] || []).length > 0).length;
-      const allLabeled = textLines.length > 0 && taggedCount === textLines.length;
       const activeStageObj = STAGES.find(s => s.id === activeStage) ?? null;
 
       return (
@@ -1642,30 +1639,15 @@ Output the customer message only -- no explanation, no signal labels.`;
                   </div>
                 )}
 
-                {/* ── Progress hint — only for Evaluate until all lines labeled ── */}
-                {activeStage === 'evaluate' && !allLabeled && (
-                  <div style={{border:'1px solid #bfdbfe',borderRadius:8,background:'#eff6ff',padding:'10px 14px',marginTop:8}}>
-                    <div style={{fontSize:12,fontWeight:700,color:'#1d4ed8',marginBottom:4}}>
-                      Label every sentence to unlock Step 1
-                    </div>
-                    <div style={{fontSize:11,color:'#3730a3',marginBottom:6}}>
-                      {taggedCount} / {textLines.length} sentences labeled
-                    </div>
-                    <div style={{height:5,borderRadius:999,background:'#bfdbfe',overflow:'hidden'}}>
-                      <div style={{height:'100%',borderRadius:999,background:'#2563eb',width:textLines.length > 0 ? Math.round(taggedCount/textLines.length*100) + '%' : '0%',transition:'width 0.3s'}} />
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Stage content — Evaluate gated until all lines labeled ── */}
-                {activeStageObj && (activeStage !== 'evaluate' || allLabeled) && (() => {
+                {/* ── Stage content ── */}
+                {activeStageObj && (() => {
                   const stage = activeStageObj;
                   const sv = STAGE_VISUALS[stage.id];
                   return (
                     <>
                       <hr className="divider" />
                       <div style={{display:'flex',alignItems:'center',gap:8}}>
-                        {sv && <Ic n={sv.icon} size={16} color={stage.color} />}
+                        {sv && <Ic n={sv.icon} size={16} color="#2563eb" />}
                         <div className="stage-title" style={{color:stage.color}}>
                           Step {stage.stepNum} — {stage.label}
                           {stage.audienceExercise && (
@@ -1676,10 +1658,10 @@ Output the customer message only -- no explanation, no signal labels.`;
 
                       {/* Visual hint */}
                       {sv && (
-                        <div style={{border:`1px solid ${stage.border}`,borderRadius:8,background:stage.bg,padding:'10px 14px'}}>
+                        <div style={{border:'1px solid #e2e8f0',borderRadius:8,background:'#f8fafc',padding:'10px 14px'}}>
                           <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
-                            <Ic n={sv.icon} size={12} color={stage.color} />
-                            <span style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:stage.color}}>Visual Hint</span>
+                            <Ic n={sv.icon} size={12} color="#2563eb" />
+                            <span style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:'#2563eb'}}>Visual Hint</span>
                             <span style={{fontSize:11,color:'#94a3b8',marginLeft:4}}>{sv.concept}</span>
                           </div>
                           <sv.graphic />
