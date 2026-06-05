@@ -1534,7 +1534,7 @@ Output the customer message only -- no explanation, no signal labels.`;
 
                           {promptTab === 'light' && stage.promptLight && (
                             <div className="stage-prompt-wrap">
-                              <pre className="stage-prompt">{renderPrompt(buildPromptWithContext(stage, stage.promptLight))}</pre>
+                              <PillarPrompt text={buildPromptWithContext(stage, stage.promptLight)} />
                               <button className="stage-copy-btn" onClick={()=>{
                                 navigator.clipboard.writeText(buildPromptWithContext(stage, stage.promptLight));
                                 setCopiedStage(stage.id+"_light");
