@@ -1205,40 +1205,63 @@ Output the customer message only -- no explanation, no signal labels.`;
     }
 
     function ScenarioGameVisual() {
-      const scenarios = [
-        {label:'Urgent issue',     signals:['Urgency','Business Impact','Request'],                          color:'#c2410c',bg:'#fff7ed'},
-        {label:'DSAT',             signals:['Sentiment','Unmet Expectation','Escalation Signal'],            color:'#b91c1c',bg:'#fff0f0'},
-        {label:'Call request',     signals:['Urgency','Context','Request'],                                  color:'#1d4ed8',bg:'#eff6ff'},
-        {label:'AI-written ticket',signals:['Context','Request'],                                            color:'#475569',bg:'#f8fafc'},
-      ];
       return (
         <div style={{display:'flex',gap:14,alignItems:'flex-start',padding:'10px 0',fontSize:12,userSelect:'none'}}>
-          {/* Left — raw scenario */}
-          <div style={{flex:1,display:'flex',flexDirection:'column',gap:5}}>
-            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#94a3b8',marginBottom:2}}>ANY SCENARIO</div>
-            {scenarios.map((s,i)=>(
-              <div key={i} style={{padding:'5px 8px',borderRadius:6,background:s.bg,border:`1px solid ${s.color}20`}}>
-                <div style={{fontSize:11,fontWeight:600,color:s.color,marginBottom:3}}>{s.label}</div>
-                <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                  {s.signals.map((sig,j)=>(
-                    <span key={j} style={{fontSize:9,padding:'1px 5px',borderRadius:999,background:'#fff',border:`1px solid ${s.color}40`,color:s.color}}>{sig}</span>
-                  ))}
-                </div>
+
+          {/* Left — pick + generate */}
+          <div style={{flex:1.1,display:'flex',flexDirection:'column',gap:6}}>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#94a3b8',marginBottom:2}}>1 — pick a scenario</div>
+
+            <div style={{display:'flex',flexDirection:'column',gap:4}}>
+              <div style={{fontSize:9,color:'#94a3b8',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em'}}>Scenario type</div>
+              <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                {['Frustrated customer','API down','Missing metrics'].map((s,i)=>(
+                  <span key={i} style={{fontSize:10,padding:'2px 8px',borderRadius:999,
+                    background: i===0?'#d97706':'#f1f5f9',
+                    color: i===0?'#fff':'#64748b',
+                    border: i===0?'none':'1px solid #e2e8f0',
+                    fontWeight: i===0?700:400}}>{s}</span>
+                ))}
               </div>
-            ))}
+            </div>
+
+            <div style={{display:'flex',flexDirection:'column',gap:4}}>
+              <div style={{fontSize:9,color:'#94a3b8',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em'}}>Product area</div>
+              <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                {['APM','Logs','Infrastructure'].map((p,i)=>(
+                  <span key={i} style={{fontSize:10,padding:'2px 8px',borderRadius:999,
+                    background: i===0?'#2563eb':'#f1f5f9',
+                    color: i===0?'#fff':'#64748b',
+                    border: i===0?'none':'1px solid #e2e8f0',
+                    fontWeight: i===0?700:400}}>{p}</span>
+                ))}
+              </div>
+            </div>
+
+            <div style={{padding:'5px 10px',borderRadius:6,background:'#1f2328',color:'#fff',fontSize:10,fontWeight:700,textAlign:'center',marginTop:2}}>
+              Copy prompt → paste into AI
+            </div>
+
+            <div style={{background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:6,padding:'6px 8px'}}>
+              <div style={{fontSize:9,fontWeight:700,color:'#94a3b8',marginBottom:4}}>AI returns realistic message</div>
+              {[85,70,92,60,78].map((w,i)=>(
+                <div key={i} style={{height:5,borderRadius:2,background:'#cbd5e1',width:`${w}%`,marginBottom:3}}/>
+              ))}
+            </div>
           </div>
+
           {/* Arrow */}
-          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,paddingTop:28,minWidth:56}}>
-            <div style={{fontSize:14,color:'#0891b2',fontWeight:700}}>→</div>
-            <div style={{fontSize:9,fontWeight:700,color:'#0891b2',letterSpacing:'0.07em',textTransform:'uppercase',textAlign:'center',lineHeight:1.4}}>SCENARIO<br/>GAME</div>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',paddingTop:50,flexShrink:0}}>
+            <div style={{fontSize:16,color:'#64748b',fontWeight:700}}>→</div>
           </div>
-          {/* Right — same 3-step flow */}
+
+          {/* Right — 3-step flow */}
           <div style={{flex:1,display:'flex',flexDirection:'column',gap:5}}>
-            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#94a3b8',marginBottom:2}}>SAME 3-STEP FLOW</div>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#94a3b8',marginBottom:2}}>2 — run the 3-step flow</div>
             {[
-              {n:4,label:'Evaluate',color:'#d97706',note:'Detect signals · Rate risk'},
-              {n:5,label:'Draft',   color:'#15803d',note:'Map moves · Write response'},
-              {n:6,label:'Criticize',color:'#6d28d9',note:'Coverage · Best edit'},
+              {n:1,label:'Evaluate', color:'#d97706',note:'Detect signals · Rate risk'},
+              {n:2,label:'Draft',    color:'#15803d',note:'Map moves · Write response'},
+              {n:3,label:'Criticize',color:'#6d28d9',note:'Coverage · Best edit'},
             ].map((s,i)=>(
               <div key={i} style={{display:'flex',alignItems:'center',gap:7,padding:'5px 8px',borderRadius:6,background:'#f8fafc',border:'1px solid #e2e8f0'}}>
                 <div style={{width:18,height:18,borderRadius:'50%',background:s.color,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:9,fontWeight:700,flexShrink:0}}>{s.n}</div>
@@ -1248,8 +1271,9 @@ Output the customer message only -- no explanation, no signal labels.`;
                 </div>
               </div>
             ))}
-            <div style={{fontSize:9,color:'#94a3b8',fontStyle:'italic',marginTop:2}}>methodology is constant · scenario changes</div>
+            <div style={{fontSize:9,color:'#94a3b8',fontStyle:'italic',marginTop:2}}>methodology is constant — only the context changes</div>
           </div>
+
         </div>
       );
     }
