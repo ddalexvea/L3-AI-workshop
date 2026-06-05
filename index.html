@@ -623,8 +623,21 @@
           "Does the risk level require stakeholder involvement?",
           "Would your first impression have missed any signal?",
         ],
-        promptLight: `Read the customer message above.
-What is the dominant signal? What is the risk level: Low / Medium / High?`,
+        promptLight: `INSTRUCTIONS:
+Read the customer message above.
+1. Identify every signal present: Sentiment, Urgency, Business Impact, Unmet Expectation, Escalation Signal.
+2. Select the dominant signal — the one that most shapes the required response.
+3. Rate overall risk: Low / Medium / High.
+4. If Medium or High: state whether stakeholder involvement is needed and the single reason that tipped the decision.
+
+REASONING:
+Do not anchor on the loudest signal — read the full message before assigning dominance.
+A message can carry Urgency without Escalation Signal, or Negative Sentiment without Business Impact.
+
+OUTPUT FORMAT:
+- Dominant signal + one-sentence reasoning
+- Risk level
+- Stakeholder decision (Medium / High only)`,
         prompt: `CONTEXT:
 You are a Datadog TSE2 evaluating a customer message before writing a response.
 The annotated message above is your input.
@@ -662,8 +675,21 @@ OUTPUT FORMAT:
           "Does the opening paragraph lead with empathy if Sentiment or Urgency is dominant?",
           "Are all commitments concrete — dates or time windows, not 'soon' or 'ASAP'?",
         ],
-        promptLight: `Write a response to the customer message above.
-Be professional, empathetic, and direct. Address each concern in priority order. No filler phrases.`,
+        promptLight: `INSTRUCTIONS:
+Using the annotated message and risk assessment from Step 1, write a customer response:
+1. List each detected signal and the action it requires: acknowledge / clarify / commit / redirect.
+2. Order paragraphs by priority: Escalation > Business Impact > Urgency > Unmet Expectation > Sentiment.
+3. State the customer's likely emotional state and how the opening sentence should reflect it.
+4. Draft one paragraph per key point — professional, direct, no filler phrases.
+
+REASONING:
+Before drafting, identify what the customer needs most right now.
+Never write "soon" — give a real time window or a concrete next action.
+Avoid: "As per my previous email", "Please don't hesitate to reach out", "I hope this finds you well".
+
+OUTPUT:
+- Signal-to-action mapping (numbered list)
+- Response draft (one paragraph per point)`,
         prompt: `CONTEXT:
 You are a Datadog TSE2 writing a customer-facing response on behalf of the support team.
 The customer is reaching out via an async support ticket. Your team operates async-first;
@@ -700,8 +726,22 @@ OUTPUT FORMAT:
           "Are there filler phrases that should be replaced with direct language?",
           "What is the single most impactful edit — and is it a signal gap or a filler fix?",
         ],
-        promptLight: `Review the response draft above.
-What signal is missing? Any filler phrases? What is the single best edit?`,
+        promptLight: `INSTRUCTIONS:
+Review the response draft above:
+1. Check signal coverage — flag any signal from the annotation that is not addressed in the draft.
+2. Scan for filler phrases and propose direct replacements for each one found.
+3. Evaluate the opening sentence: does it lead with empathy when Sentiment or Urgency is dominant?
+4. Propose the single most impactful edit.
+
+REASONING:
+A draft that misses a signal is worse than one with filler phrases — check coverage first.
+The most impactful edit closes the largest signal gap, not just the most obvious wording issue.
+
+OUTPUT FORMAT:
+- Signal coverage (addressed / missing per signal)
+- Filler phrases (original → suggested replacement)
+- Opening sentence verdict
+- One concrete edit`,
         prompt: `CONTEXT:
 You are a Datadog TSE2 reviewing a response draft before sending.
 The draft above and the annotated customer message are your inputs.
