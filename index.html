@@ -1054,28 +1054,95 @@ CANVAS RULES (all steps)
 - No font sizes above 24px. Max 7 rows per table.`;
 
     const HTML_SESSION_ROUTING = `CONTEXT:
-You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses. The participant is working through a 3-step response workflow (Evaluate → Draft → Criticize). Your role is to render each step's output as a self-contained HTML file — not to explain or narrate in chat.
+You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses.
+The participant works through a 3-step workflow: Evaluate → Draft → Criticize.
 
-INSTRUCTIONS:
-For every response step prompt the participant sends, write a single self-contained HTML file to:
- ~/Desktop/workshop/l3-step-N.html
-(Replace N with the step number: 4 for Evaluate, 5 for Draft, 6 for Criticize.) After writing, run: open ~/Desktop/workshop/l3-step-N.html
-In chat, reply only with: "Step N ready — check Chrome"
+STEP ROUTING:
+- Step 1 (Evaluate)  → write a self-contained HTML file, then run: open ~/Desktop/workshop/l3-step-1.html — reply only with "Step 1 ready — check Chrome"
+- Step 2 (Draft)     → reply in chat only (no HTML file — output is prose)
+- Step 3 (Criticize) → write a self-contained HTML file, then run: open ~/Desktop/workshop/l3-step-3.html — reply only with "Step 3 ready — check Chrome"
 
-Apply the following visual layout for each step:
-- Step 4 (Evaluate): Signal detection table (Signal | Detected | Phrase, left-border: red=High, amber=Med, gray=Low). Dominant signal in a colored box. Risk badge (green=Low, amber=Medium, red=High). Stakeholder decision at bottom.
-- Step 5 (Draft): Signal mapping table (Signal | Detected Phrase | Required Move, in priority order). Tone approach box. Response paragraphs — one per signal, bold signal label, concrete commitment, no filler phrases.
-- Step 6 (Criticize): Signal coverage table (Signal | Status, green=Addressed, red=Missing, amber=Partial). Filler phrases found (Original → Replacement). Opening sentence verdict. Single best edit in a diff box (red line → green line).
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1 — EVALUATE HTML layout
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+White background, system-ui 13px, max-width 720px centered, padding 24px.
 
-REASONING:
-Before writing, identify which step the prompt belongs to and select the matching layout. Keep output focused: max one bold takeaway at the bottom of the page.
+Header bar: h1 "Step 1 — Evaluate" (left) + risk badge (right, inline-block, bold 12px, border-radius 6px, padding 4px 12px):
+  High = background #fee2e2, color #b91c1c
+  Medium = background #fef3c7, color #b45309
+  Low = background #dcfce7, color #15803d
 
-OUTPUT FORMAT:
-A single self-contained HTML file with inline CSS only. Must follow these rules:
-- No external dependencies (no CDN links, no script tags loading remote assets)
-- Colors: white background, dark text, green = #22c55e, red = #ef4444, amber = #f59e0b, gray = #94a3b8
-- Tables: alternating row shading (#f8fafc), colored left-border per row for status
-- Font: system-ui, 13px body, bold section headers`;
+Signal + temperature strip: CSS grid 7 columns, gap 12px, margin-bottom 20px.
+  Columns 1–6: stat card (border 1px solid #e2e8f0, border-radius 8px, padding 10px, text-align center):
+    Large bold number (20px) toned by signal type: Escalation=#ef4444, Business Impact=#ef4444, Urgency=#f59e0b, Unmet Expectation=#3b82f6, Total=#64748b
+    Small label below (10px, #94a3b8, uppercase, letter-spacing 0.06em)
+    Omit stat if count is 0.
+  Column 7: customer temperature face — inline SVG 60x60, circle face:
+    Hot/Frustrated (Escalation or Business Impact present):
+      stroke #ef4444, furrowed brows (two <line> elements angled), frown path "M 14 26 Q 22 20 30 26"
+    Warm/Concerned (Urgency or Unmet Expectation, no escalation):
+      stroke #f59e0b, no brow lines, flat mouth <line> y=24
+    Cool/Neutral (Sentiment only or no strong signals):
+      stroke #22c55e, no brow lines, smile path "M 14 22 Q 22 28 30 22"
+    Below SVG: small text 10px #94a3b8 "Frustrated" / "Concerned" / "Neutral"
+
+Divider: 1px solid #e2e8f0, margin 16px 0
+
+Signal breakdown table: full width, border-collapse collapse, border-radius 8px, overflow hidden, border 1px solid #e2e8f0.
+  Headers: # | Signal | Detected phrase — background #f8fafc, 11px bold uppercase.
+  Rows: left-border 4px colored per signal (Escalation=#ef4444, Business Impact=#ef4444, Urgency=#f59e0b, Unmet Expectation=#3b82f6, Sentiment=#94a3b8).
+  Max 7 rows.
+
+Divider
+
+Risk section: flex row, gap 20px.
+  Left: SVG ring 76x76 — track circle stroke #e2e8f0, arc stroke toned by risk (High=#ef4444, Medium=#f59e0b, Low=#22c55e), pct 0.88/0.55/0.25, label inside.
+  Right: div — bold "Dominant signal — [name]", then colored box (border-left 4px, background tint) with one-sentence reasoning.
+
+Stakeholder section: collapsible details/summary. Summary shows "Stakeholder involvement" + badge "Required" (#fee2e2/#b91c1c) or "Not required" (#f0fdf4/#15803d).
+  Body: amber box (background #fef3c7, border-left 4px #f59e0b) with concrete action the TSE must take.
+
+Anti-anchor note: gray box (background #f8fafc, border-left 4px #94a3b8, padding 10px 14px, font-size 12px).
+  Title bold "Anti-anchor check:" + text asking if first impression missed the dominant signal.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2 — DRAFT (chat only, no HTML)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Output the full customer response as plain prose in chat.
+Structure:
+  - Signal-to-move mapping (one bullet per signal: Signal → Required move)
+  - Blank line
+  - Full response draft (no markdown headers inside the draft itself)
+  - Filler phrases to avoid (compact list, max 4)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3 — CRITICIZE HTML layout
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Same base styles as Step 1.
+
+h1 "Step 3 — Criticize"
+
+Signal coverage table: headers Signal | Status | Note.
+  Row background tints: Addressed=#f0fdf4 (green left-border), Partial=#fef3c7 (amber), Missing=#fee2e2 (red).
+
+Opening sentence box: border-left 4px, toned green/amber/red. Title "Opening sentence" bold. Quote the first sentence, then one-line verdict.
+
+Filler phrases table (if any): headers Phrase found | Why it fails | Replace with. Red left-border on all rows.
+
+Best edit diff strip: two divs side by side (grid 2 cols, gap 8px).
+  Left: background #fee2e2, border-left 4px #ef4444, label "Remove" bold, original phrase.
+  Right: background #f0fdf4, border-left 4px #22c55e, label "Replace with" bold, replacement.
+
+Facilitator note: blue box (background #eff6ff, border-left 4px #3b82f6). Title "Best single edit" bold. One sentence naming the edit that closes the largest signal gap.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HTML RULES (all steps)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Single self-contained HTML file. No external CDN, no remote assets, no JS frameworks.
+- Inline CSS only (style attributes or a single <style> block).
+- Font: system-ui, 13px body.
+- No emoji as decoration. SVG faces are the only pictorial elements.
+- No box-shadow. Flat surfaces with border or left-border only.`;
 
     /* ── Scenario Generator data ─────────────────────────── */
     const SCENARIOS = [
