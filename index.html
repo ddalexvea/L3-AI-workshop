@@ -948,49 +948,110 @@ We need a concrete timeline for resolution today, or we will need to involve our
 
     /* ── Session routing prompts ────────────────────────── */
     const CANVAS_SESSION_ROUTING = `CONTEXT:
-You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses. The participant works through a 3-step workflow: Evaluate → Draft → Criticize. Your role is to render each step's output as a Cursor canvas file. Do not narrate in chat — only write the canvas.
+You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses.
+The participant works through a 3-step workflow: Evaluate → Draft → Criticize.
 
-INSTRUCTIONS:
-For every step prompt the participant sends, write a canvas file at:
-  ~/Desktop/workshop/l3-step-N.canvas.tsx  (N = 1, 2, or 3)
-In chat reply only with: "Canvas ready — open l3-step-N.canvas.tsx"
+STEP ROUTING:
+- Step 1 (Evaluate) → write a canvas file
+- Step 2 (Draft)    → reply in chat only (no canvas — output is prose)
+- Step 3 (Criticize) → write a canvas file
 
-CANVAS LAYOUT PER STEP:
+For canvas steps: write the file at ~/Desktop/workshop/l3-step-N.canvas.tsx and reply only with:
+  "Canvas ready — open l3-step-N.canvas.tsx"
+For Step 2: reply with the full response draft in chat, no preamble.
 
-Step 1 — Evaluate:
-  1. Header row: H1 "Step 1 — Evaluate" + Pill (tone="deleted" active) showing HIGH / MEDIUM / LOW RISK, right-aligned with Spacer
-  2. Signal count strip: Grid columns=4, one Stat per signal type found (value=count, label=signal name, tone: danger for Escalation Signal + Business Impact, warning for Urgency, info for Unmet Expectation, neutral for Sentiment)
-  3. Divider
-  4. H2 "Signal breakdown" + Table — headers: Priority | Signal | Detected phrase — rowTone: danger for Escalation Signal and Business Impact, warning for Urgency, info for Unmet Expectation, neutral for Sentiment
-  5. Divider
-  6. Risk ring + dominant signal: Row containing (a) inline SVG donut ring — 72x72, r=28, stroke=theme token color for risk level, label inside; (b) Stack with H3 "Dominant signal" and Callout (tone matches risk) naming the signal and one-sentence reasoning
-  7. Stakeholder decision Card (collapsible): CardHeader text "Stakeholder involvement" + trailing Pill ("Required" tone=deleted active, or "Not required" tone=neutral); CardBody = Callout with the concrete action the TSE must take
-  8. Anti-anchor Callout (tone="neutral", title="Anti-anchor check"): ask whether first impression missed any signal
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1 — EVALUATE canvas layout
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Step 2 — Draft:
-  1. Header: H1 "Step 2 — Draft" + risk Pill (carry from Step 1)
-  2. Signal-to-move Table — headers: Signal | Required move | Priority — rowTone matches signal tone
-  3. Tone approach Callout (tone="info", title="Tone approach"): state whether to lead with empathy or concrete timeline based on dominant signal
-  4. Response draft: one collapsible Card per paragraph — CardHeader = signal label, CardBody = draft text
-  5. Filler phrase table: headers: Avoid | Use instead — rowTone: danger on Avoid rows; max 4 rows
-  6. Commitment check Callout (tone="warning"): flag any vague commitments still in the draft ("soon", "ASAP", "we'll look into it")
+1. Header row
+   H1 "Step 1 — Evaluate" + Spacer + Pill (tone matching risk: "deleted"=High, "warning"=Medium, "success"=Low, active) showing "HIGH RISK" / "MEDIUM RISK" / "LOW RISK"
 
-Step 3 — Criticize:
-  1. Header: H1 "Step 3 — Criticize"
-  2. Signal coverage Table — headers: Signal | Status | Note — rowTone: success=Addressed, warning=Partial, danger=Missing
-  3. Opening sentence Callout (tone="success"|"warning"|"danger", title="Opening sentence"): quote the opening sentence and rate it
-  4. Filler phrases Table — headers: Phrase | Why it fails | Replacement — rowTone: danger on all rows
-  5. Best edit: Grid columns=2 — left Callout (tone="danger", title="Remove") + right Callout (tone="success", title="Replace with")
-  6. Facilitator note Callout (tone="info", title="Best single edit"): the one edit that closes the largest signal gap
+2. Signal + temperature strip  (Grid columns=7, gap=12)
+   • Stat — value=count, label="Escalation Signals", tone="danger"  (omit if 0)
+   • Stat — value=count, label="Business Impact", tone="danger"      (omit if 0)
+   • Stat — value=count, label="Urgency", tone="warning"             (omit if 0)
+   • Stat — value=count, label="Unmet Expectation", tone="info"      (omit if 0)
+   • Stat — value=count, label="Sentiment", tone="neutral"           (omit if 0)
+   • Stat — value=total, label="Total signals"
+   • Customer temperature face — inline SVG (60x60), drawn as a circle face:
+       Hot/Frustrated (Escalation Signal or Business Impact present):
+         stroke=theme.diff.stripRemoved, furrowed brows (two angled lines above eyes), frown path "M 14 26 Q 22 20 30 26"
+       Warm/Concerned (Urgency or Unmet Expectation, no escalation):
+         stroke=theme.accent.primary, no brow lines, flat mouth "M 14 24 L 30 24"
+       Cool/Neutral (Sentiment only, or no strong signal):
+         stroke=theme.diff.stripAdded, no brow lines, smile path "M 14 22 Q 22 28 30 22"
+     Below the SVG: Text size="small" tone="secondary" with "Frustrated" / "Concerned" / "Neutral"
+     Use useHostTheme() for all colors. No hardcoded hex.
 
-CANVAS RULES (apply to all steps):
-- Import only from cursor/canvas. No external packages.
-- Use useHostTheme() for all colors. No hardcoded hex values.
+3. Divider
+
+4. H2 "Signal breakdown" + Table
+   headers: ["#", "Signal", "Detected phrase"]
+   columnAlign: ["center", "left", "left"]
+   rowTone: danger=Escalation Signal/Business Impact, warning=Urgency, info=Unmet Expectation, neutral=Sentiment
+   Max 7 rows.
+
+5. Divider
+
+6. Risk ring + dominant signal (Row, gap=20, align="start")
+   Left: inline SVG ring (76x76, r=30, cx/cy=38):
+     Track circle: stroke=theme.stroke.tertiary, strokeWidth=7
+     Arc: stroke=theme.diff.stripRemoved (High) / theme.accent.primary (Medium) / theme.diff.stripAdded (Low)
+          pct=0.88 (High) / 0.55 (Medium) / 0.25 (Low), strokeLinecap="round", rotate(-90)
+     Label text inside: fontSize=11, fontWeight=700, fill=arcColor, text="High"/"Medium"/"Low"
+   Right: Stack — H3 "Dominant signal — [name]" + Callout (tone="danger"|"warning"|"neutral") with one-sentence reasoning
+
+7. Stakeholder Card (collapsible, defaultOpen)
+   CardHeader text "Stakeholder involvement" + trailing Pill: tone="deleted" active "Required", or tone="neutral" "Not required"
+   CardBody: Callout (tone="warning" if required, "neutral" if not) with the concrete action
+
+8. Anti-anchor Callout (tone="neutral", title="Anti-anchor check")
+   Ask whether first impression anchored on a weaker signal and missed the dominant one.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2 — DRAFT (chat only, no canvas)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Output the full customer response as plain prose in chat.
+Structure:
+  - Signal-to-move mapping (one bullet per signal: Signal → Required move)
+  - Blank line
+  - Full response draft (no markdown headers inside the draft itself)
+  - Filler phrases to avoid (compact list, max 4)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3 — CRITICIZE canvas layout
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Header: H1 "Step 3 — Criticize"
+
+2. Signal coverage Table
+   headers: ["Signal", "Status", "Note"]
+   rowTone: success=Addressed, warning=Partial, danger=Missing
+
+3. Opening sentence Callout (tone="success"|"warning"|"danger", title="Opening sentence")
+   Quote the first sentence of the draft and rate it.
+
+4. Filler phrases Table (if any found)
+   headers: ["Phrase found", "Why it fails", "Replace with"]
+   rowTone: danger on all rows
+
+5. Best edit — Grid columns=2
+   Left Callout (tone="danger", title="Remove")
+   Right Callout (tone="success", title="Replace with")
+
+6. Facilitator note Callout (tone="info", title="Best single edit")
+   The one edit that closes the largest signal gap.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CANVAS RULES (all steps)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Import only from cursor/canvas.
+- useHostTheme() for all colors. No hardcoded hex.
 - No box-shadow, no gradients, no emoji as decoration.
-- Table rowTone valid values: "success" | "danger" | "warning" | "info" | "neutral"
-- Pill tone valid values: "neutral" | "added" | "deleted" | "renamed" | "success" | "warning" | "info"
-- SVG ring: inline SVG arc only — stroke color from useHostTheme() (theme.text.danger / theme.text.warning / theme.text.success resolved at runtime). No chart library.
-- Max 7 rows per signal table. One clear takeaway at the bottom of every canvas.`
+- Table rowTone: "success" | "danger" | "warning" | "info" | "neutral"
+- Pill tone: "neutral" | "added" | "deleted" | "renamed" | "success" | "warning" | "info"
+- No font sizes above 24px. Max 7 rows per table.`;
 
     const HTML_SESSION_ROUTING = `CONTEXT:
 You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses. The participant is working through a 3-step response workflow (Evaluate → Draft → Criticize). Your role is to render each step's output as a self-contained HTML file — not to explain or narrate in chat.
