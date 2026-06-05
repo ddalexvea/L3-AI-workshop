@@ -1346,6 +1346,9 @@ Output the customer message only -- no explanation, no signal labels.`;
       }
 
       const totalTags = Object.values(tags).flat().length;
+      const textLines = lines.filter(l => l.type === 'text' || l.type === 'intro-code');
+      const taggedCount = textLines.filter(l => (tags[l.id] || []).length > 0).length;
+      const allLabeled = textLines.length > 0 && taggedCount === textLines.length;
       const activeStageObj = STAGES.find(s => s.id === activeStage) ?? null;
 
       return (
@@ -1639,8 +1642,23 @@ Output the customer message only -- no explanation, no signal labels.`;
                   </div>
                 )}
 
-                {/* ── Stage content ── */}
-                {activeStageObj && (() => {
+                {/* ── Progress hint — only for Evaluate until all lines labeled ── */}
+                {activeStage === 'evaluate' && !allLabeled && (
+                  <div style={{border:'1px solid #bfdbfe',borderRadius:8,background:'#eff6ff',padding:'10px 14px',marginTop:8}}>
+                    <div style={{fontSize:12,fontWeight:700,color:'#1d4ed8',marginBottom:4}}>
+                      Label every sentence to unlock Step 1
+                    </div>
+                    <div style={{fontSize:11,color:'#3730a3',marginBottom:6}}>
+                      {taggedCount} / {textLines.length} sentences labeled
+                    </div>
+                    <div style={{height:5,borderRadius:999,background:'#bfdbfe',overflow:'hidden'}}>
+                      <div style={{height:'100%',borderRadius:999,background:'#2563eb',width:textLines.length > 0 ? Math.round(taggedCount/textLines.length*100) + '%' : '0%',transition:'width 0.3s'}} />
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Stage content — Evaluate gated until all lines labeled ── */}
+                {activeStageObj && (activeStage !== 'evaluate' || allLabeled) && (() => {
                   const stage = activeStageObj;
                   const sv = STAGE_VISUALS[stage.id];
                   return (
