@@ -841,7 +841,18 @@ This is directly impacting our ability to respond to production incidents.
 
 We need a concrete timeline for resolution today, or we will need to involve our account team.`;
 
-    const PILLARS = ["CONTEXT", "INSTRUCTIONS", "REASONING", "EXAMPLES", "OUTPUT FORMAT"];
+    const PILLARS = ["CONTEXT", "INSTRUCTIONS", "REASONING", "EXAMPLES", "OUTPUT FORMAT", "OUTPUT"];
+
+    function renderPrompt(text) {
+      return text.split("\n").map((line, i, arr) => {
+        const m = line.match(/^([A-Z][A-Z ]+):$/);
+        if (m && PILLARS.includes(m[1])) {
+          const cls = m[1].replace(/\s+/g, "_");
+          return <span key={i} className={`pillar pillar-${cls}`}>{line}{i < arr.length - 1 ? "\n" : ""}</span>;
+        }
+        return <span key={i}>{line}{i < arr.length - 1 ? "\n" : ""}</span>;
+      });
+    }
 
     const PILLAR_META = {
       'CONTEXT':       { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
@@ -1079,9 +1090,10 @@ Output the customer message only -- no explanation, no signal labels.`;
       const [copiedStage, setCopiedStage] = useState(null);
       const [tool, setTool] = useState("cursor");
       const [promptTab, setPromptTab] = useState("goal");
+      const [answerOpen, setAnswerOpen] = useState({});
       const [scenario, setScenario] = useState("");
       const [product, setProduct] = useState("");
-      useEffect(() => { setPromptTab("goal"); }, [activeStage]);
+      useEffect(() => { setPromptTab("goal"); setAnswerOpen({}); }, [activeStage]);
 
       function toggleStage(id) {
         setActiveStage(prev => prev === id ? null : id);
@@ -1466,64 +1478,83 @@ Output the customer message only -- no explanation, no signal labels.`;
                         </div>
                       )}
 
-                      {/* Prompts — 3-tab section */}
-                      <div style={{background:stage.bg,border:`1.5px solid ${stage.border}`,borderRadius:8,padding:'12px 14px',display:'flex',flexDirection:'column',gap:10}}>
-                        <div style={{display:'flex',alignItems:'center',gap:8}}>
-                          <span style={{fontSize:13,fontWeight:600,color:stage.color}}>Prompt</span>
-                          <div style={{display:'flex',background:'#f1f5f9',borderRadius:999,padding:3,gap:2,marginLeft:'auto'}}>
-                            {[
-                              {id:'goal',label:'Goal',icon:'Target'},
-                              {id:'light',label:'Light (result)',icon:'Zap'},
-                              {id:'complete',label:'Complete (result)',icon:'BookOpen'},
-                            ].map(tab => {
-                              const active = promptTab === tab.id;
-                              return (
-                                <button key={tab.id} onClick={()=>setPromptTab(tab.id)} style={{
-                                  flex:1,border:'none',borderRadius:6,padding:'5px 10px',
-                                  fontSize:11,fontWeight:600,cursor:'pointer',
-                                  background:active?'#fff':'transparent',
-                                  color:active?stage.color:'#94a3b8',
-                                  boxShadow:active?'0 1px 3px rgba(0,0,0,0.08)':'none',
-                                  transition:'all 0.15s',
-                                  display:'flex',alignItems:'center',justifyContent:'center',gap:4,
-                                  whiteSpace:'nowrap',
-                                }}>
-                                  <Ic n={tab.icon} size={10} />
-                                  {tab.label}
-                                </button>
-                              );
-                            })}
+                      {/* Prompts — spoiler toggle */}
+                      <button
+                        onClick={() => setAnswerOpen(prev => ({...prev, [stage.id]: !prev[stage.id]}))}
+                        style={{
+                          display:'flex',alignItems:'center',gap:6,width:'100%',
+                          border:`1px solid ${answerOpen[stage.id] ? stage.border : '#e2e8f0'}`,
+                          borderRadius:8,padding:'7px 12px',
+                          background:answerOpen[stage.id] ? stage.bg : '#f8fafc',
+                          cursor:'pointer',fontSize:12,fontWeight:600,
+                          color:answerOpen[stage.id] ? stage.color : '#64748b',
+                          transition:'all 0.15s',
+                        }}
+                      >
+                        <Ic n={answerOpen[stage.id] ? 'EyeOff' : 'Eye'} size={12} />
+                        {answerOpen[stage.id] ? 'Hide answer' : 'Show answer'}
+                        <span style={{marginLeft:'auto',fontSize:10,fontWeight:400,color:'#94a3b8'}}>Goal · Light · Complete</span>
+                      </button>
+
+                      {answerOpen[stage.id] && (
+                        <div style={{background:stage.bg,border:`1.5px solid ${stage.border}`,borderRadius:8,padding:'12px 14px',display:'flex',flexDirection:'column',gap:10}}>
+                          <div style={{display:'flex',alignItems:'center',gap:8}}>
+                            <span style={{fontSize:13,fontWeight:600,color:stage.color}}>Prompt</span>
+                            <div style={{display:'flex',background:'#f1f5f9',borderRadius:999,padding:3,gap:2,marginLeft:'auto'}}>
+                              {[
+                                {id:'goal',label:'Goal',icon:'Target'},
+                                {id:'light',label:'Light (result)',icon:'Zap'},
+                                {id:'complete',label:'Complete (result)',icon:'BookOpen'},
+                              ].map(tab => {
+                                const active = promptTab === tab.id;
+                                return (
+                                  <button key={tab.id} onClick={()=>setPromptTab(tab.id)} style={{
+                                    flex:1,border:'none',borderRadius:6,padding:'5px 10px',
+                                    fontSize:11,fontWeight:600,cursor:'pointer',
+                                    background:active?'#fff':'transparent',
+                                    color:active?stage.color:'#94a3b8',
+                                    boxShadow:active?'0 1px 3px rgba(0,0,0,0.08)':'none',
+                                    transition:'all 0.15s',
+                                    display:'flex',alignItems:'center',justifyContent:'center',gap:4,
+                                    whiteSpace:'nowrap',
+                                  }}>
+                                    <Ic n={tab.icon} size={10} />
+                                    {tab.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
+
+                          {promptTab === 'goal' && (
+                            <div style={{fontSize:13,color:'#475569',lineHeight:1.6,padding:'2px 0'}}>
+                              {stage.goal}
+                            </div>
+                          )}
+
+                          {promptTab === 'light' && stage.promptLight && (
+                            <div className="stage-prompt-wrap">
+                              <pre className="stage-prompt">{renderPrompt(buildPromptWithContext(stage, stage.promptLight))}</pre>
+                              <button className="stage-copy-btn" onClick={()=>{
+                                navigator.clipboard.writeText(buildPromptWithContext(stage, stage.promptLight));
+                                setCopiedStage(stage.id+"_light");
+                                setTimeout(()=>setCopiedStage(null),2000);
+                              }}>
+                                {copiedStage===stage.id+"_light"?"✓ Copied!":"Copy"}
+                              </button>
+                            </div>
+                          )}
+
+                          {promptTab === 'complete' && (
+                            <div className="stage-prompt-wrap">
+                              <PillarPrompt text={buildPromptWithContext(stage, stage.prompt)} />
+                              <button className="stage-copy-btn" onClick={()=>copyPrompt(stage)}>
+                                {copiedStage===stage.id?"✓ Copied!":"Copy"}
+                              </button>
+                            </div>
+                          )}
                         </div>
-
-                        {promptTab === 'goal' && (
-                          <div style={{fontSize:13,color:'#475569',lineHeight:1.6,padding:'2px 0'}}>
-                            {stage.goal}
-                          </div>
-                        )}
-
-                        {promptTab === 'light' && stage.promptLight && (
-                          <div className="stage-prompt-wrap">
-                            <pre className="stage-prompt">{stage.promptLight}</pre>
-                            <button className="stage-copy-btn" onClick={()=>{
-                              navigator.clipboard.writeText(buildPromptWithContext(stage, stage.promptLight));
-                              setCopiedStage(stage.id+"_light");
-                              setTimeout(()=>setCopiedStage(null),2000);
-                            }}>
-                              {copiedStage===stage.id+"_light"?"✓ Copied!":"Copy"}
-                            </button>
-                          </div>
-                        )}
-
-                        {promptTab === 'complete' && (
-                          <div className="stage-prompt-wrap">
-                            <PillarPrompt text={stage.prompt} />
-                            <button className="stage-copy-btn" onClick={()=>copyPrompt(stage)}>
-                              {copiedStage===stage.id?"✓ Copied!":"Copy"}
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </>
                   );
                 })()}
