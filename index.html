@@ -610,11 +610,97 @@
         graphic: CriticizeVisual },
     };
 
+    /* ── Visual hint mini-components ─────────────────────── */
+    const HV = {
+      Contrast: ({bad, good}) => (
+        <div style={{display:'flex',flexDirection:'column',gap:4,fontSize:12}}>
+          <div style={{color:'#b91c1c'}}>✗ {bad}</div>
+          <div style={{color:'#15803d'}}>✓ {good}</div>
+        </div>
+      ),
+      Table: ({rows, cols}) => (
+        <table style={{fontSize:11,borderCollapse:'collapse',width:'100%'}}>
+          {cols && <thead><tr>{cols.map((c,i)=><th key={i} style={{textAlign:'left',padding:'2px 6px',color:'#94a3b8',fontWeight:700,fontSize:10}}>{c}</th>)}</tr></thead>}
+          <tbody>{rows.map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j} style={{padding:'2px 6px',color:'#475569'}}>{cell}</td>)}</tr>)}</tbody>
+        </table>
+      ),
+      Priority: ({rows}) => (
+        <div style={{display:'flex',flexDirection:'column',gap:3}}>
+          {rows.map(([n,signal,color],i)=>(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:6,fontSize:11}}>
+              <span style={{width:16,fontWeight:700,color:'#94a3b8'}}>{n}</span>
+              <span style={{color}}>{signal}</span>
+            </div>
+          ))}
+        </div>
+      ),
+    };
+
+    const STAGE_VISUAL_HINTS = {
+      evaluate: [
+        () => <HV.Contrast
+          bad="Anchor on the most obvious signal immediately"
+          good="List ALL signals present before assigning a dominant one" />,
+        () => <HV.Priority rows={[
+          ['1','Escalation Signal','#6d28d9'],
+          ['2','Business Impact','#c2410c'],
+          ['3','Urgency','#b45309'],
+          ['4','Unmet Expectation','#9d174d'],
+          ['5','Negative Sentiment','#b91c1c'],
+        ]} />,
+        () => <HV.Table cols={['Risk','Criteria']} rows={[
+          ['High','Escalation Signal present, OR Business Impact + Urgency together'],
+          ['Medium','Unmet Expectation, OR Urgency without Business Impact'],
+          ['Low','Sentiment only, OR Context/Request with no urgency signals'],
+        ]} />,
+        () => <HV.Contrast
+          bad="\"I'll look into this\" (vague, no action)"
+          good="\"Yes — I am looping in [AE name] on this thread now\" (named, immediate)" />,
+      ],
+      draft: [
+        () => <HV.Table cols={['Signal','Required move']} rows={[
+          ['Escalation Signal','Name the path explicitly — do not soften it'],
+          ['Business Impact','Confirm understanding + state priority level'],
+          ['Urgency','Concrete timeline — date or time window, never "soon"'],
+          ['Unmet Expectation','Own the gap directly — no deflection'],
+          ['Sentiment','Empathy before any technical content'],
+        ]} />,
+        () => <HV.Contrast
+          bad="\"We will resolve this as soon as possible\""
+          good="\"I will send you an update by Thursday 17:00 CET with a resolution timeline\"" />,
+        () => <HV.Table cols={['Filler phrase','Why it fails']} rows={[
+          ['"I hope this finds you well"','Ignores visible urgency'],
+          ['"As per my previous email"','Deflects — makes the customer feel blamed'],
+          ['"Please don\'t hesitate to reach out"','Vague — no concrete action offered'],
+          ['"I understand your frustration"','Empathy theater if not followed by action'],
+        ]} />,
+        () => <HV.Contrast
+          bad="\"We are looking into this\" (no timeline)"
+          good="\"I am escalating this to our team and will reply with findings by EOD tomorrow\"" />,
+      ],
+      criticize: [
+        () => <HV.Contrast
+          bad="Fix phrasing first (cosmetic)"
+          good="Check signal coverage first — a gap is worse than a filler phrase" />,
+        () => <HV.Contrast
+          bad="Opening: \"Thank you for reaching out. I'll investigate the APM issue...\""
+          good="Opening: \"I understand how disruptive this is — let me address each point directly.\"" />,
+        () => <HV.Table cols={['Pattern','Replacement']} rows={[
+          ['"As per my previous email"','"As I mentioned on [date],"'],
+          ['"Please don\'t hesitate"','"Reply here and I\'ll respond within [time]"'],
+          ['"ASAP"','"by [concrete date/time]"'],
+          ['"Looking into it"','"I\'ll have an update by [time]"'],
+        ]} />,
+        () => <HV.Contrast
+          bad="Propose 3 edits at once"
+          good="State the SINGLE edit that closes the largest signal gap" />,
+      ],
+    };
 
     /* ── Stage definitions ──────────────────────────────── */
     const L3_STAGES = [
       {
-        id: "evaluate", label: "Evaluate", stepNum: 1,
+        id: "evaluate", label: "Evaluate", stepNum: 4,
         color: "#d97706", bg: "#fffbeb", border: "#fde68a",
         goal: "Detect every signal before rating risk. Apply the anti-anchoring rule: read the full message before assigning a dominant signal. A message can carry Urgency without Escalation Signal, or Negative Sentiment without Business Impact.",
         steps: [
@@ -653,7 +739,7 @@ OUTPUT FORMAT:
 - Stakeholder decision (only if risk is Medium or High)`,
       },
       {
-        id: "draft", label: "Draft", stepNum: 2, audienceExercise: true,
+        id: "draft", label: "Draft", stepNum: 5, audienceExercise: true,
         color: "#15803d", bg: "#f0fdf4", border: "#86efac",
         goal: "Map each detected signal to a required response move. Order paragraphs by priority (Escalation > Business Impact > Urgency > Unmet Expectation > Sentiment > Context > Request). Never write 'soon' — give a real time window or the next concrete action.",
         steps: [
@@ -691,7 +777,7 @@ OUTPUT FORMAT:
 - Response draft (one paragraph per point, professional and empathetic)`,
       },
       {
-        id: "criticize", label: "Criticize", stepNum: 3,
+        id: "criticize", label: "Criticize", stepNum: 6,
         color: "#6d28d9", bg: "#faf5ff", border: "#ddd6fe",
         goal: "Check signal coverage first — a draft that misses a signal is worse than one with filler phrases. Opening sentence must lead with empathy if Sentiment or Urgency is dominant. The single most impactful edit closes the largest signal gap.",
         steps: [
@@ -1060,12 +1146,14 @@ Output the customer message only -- no explanation, no signal labels.`;
       const [copiedStage, setCopiedStage] = useState(null);
       const [tool, setTool] = useState("cursor");
       const [promptTab, setPromptTab] = useState("goal");
+      const [showLabel, setShowLabel] = useState(false);
       const [scenario, setScenario] = useState("");
       const [product, setProduct] = useState("");
       useEffect(() => { setPromptTab("goal"); }, [activeStage]);
 
       function toggleStage(id) {
         setActiveStage(prev => prev === id ? null : id);
+        setShowLabel(false);
       }
 
       function buildPromptWithContext(stage, base) {
@@ -1162,7 +1250,8 @@ Output the customer message only -- no explanation, no signal labels.`;
 
             {/* Welcome */}
             {activeStage === null && (
-              <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:20,padding:'40px 0 40px'}}>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:20,padding:'20px 0 40px'}}>
+                <ResponseWorkshopVisual />
                 <div style={{fontSize:22,fontWeight:700,color:'#1f2328',textAlign:'center'}}>L3 AI Response Workshop</div>
                 <div style={{fontSize:13,color:'#64748b',maxWidth:500,lineHeight:1.6,textAlign:'center'}}>
                   A 3-step structured workflow for customer-facing responses — from signal annotation to a polished, empathy-first reply. Use the step prompts to drive your AI session.
@@ -1196,6 +1285,19 @@ Output the customer message only -- no explanation, no signal labels.`;
                   </div>
                 </details>
 
+                {/* Setup reference */}
+                <div className="prep-block">
+                  <div className="prep-block-label">3-Desktop Setup</div>
+                  <div style={{fontSize:12,color:'#78350f',lineHeight:1.6}}>
+                    <strong>Desktop 1:</strong> Chrome — Zendesk + this annotation tool<br />
+                    <strong>Desktop 2:</strong> Cursor or Claude — AI chat session<br />
+                    <strong>Desktop 3:</strong> Chrome — L3 slides in Presenter View (share this window in Zoom)
+                  </div>
+                  <div style={{fontSize:11,color:'#92400e',marginTop:4}}>Switch desktops with <strong>Ctrl + Left / Right</strong></div>
+                </div>
+
+                <hr className="divider" />
+
                 {/* Tool toggle */}
                 <div className="prep-block">
                   <div className="prep-block-label">Session Routing — paste once in AI chat</div>
@@ -1216,6 +1318,25 @@ Output the customer message only -- no explanation, no signal labels.`;
                   </div>
                 </div>
 
+                <hr className="divider" />
+
+                {/* Workshop steps reference */}
+                <div className="prep-block">
+                  <div className="prep-block-label">Live Example Flow (repeat per scenario)</div>
+                  {[
+                    ["1. Present","Share the customer message — give participants 1 min to read"],
+                    ["2. Annotate","Open this tool, paste the message, drag signals onto each sentence"],
+                    ["3. Generate","Click \"Generate prompt block\" → paste into AI chat"],
+                    ["4. Evaluate","Run the Step 4 prompt → discuss risk level with the group"],
+                    ["5. Draft","Ask participants to write their own prompt first, then reveal Complete version"],
+                    ["6. Criticize","Ask the group: \"What would you change before sending?\""],
+                  ].map(([step,desc],i)=>(
+                    <div key={i} style={{display:'flex',gap:8,fontSize:12,color:'#78350f',lineHeight:1.5}}>
+                      <span style={{fontWeight:700,flexShrink:0,color:'#d97706'}}>{step}:</span>
+                      <span>{desc}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -1280,7 +1401,7 @@ Output the customer message only -- no explanation, no signal labels.`;
                 <div style={{display:'flex',flexDirection:'column',gap:8}}>
                   <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.07em',textTransform:'uppercase',color:'#0891b2'}}>Generation Prompt — paste into AI chat</div>
                   <div className="stage-prompt-wrap">
-                    <pre className="stage-prompt" style={{fontSize:11,background:'#f8fafc',borderColor:'#a5f3fc'}}>
+                    <pre className="stage-prompt" style={{fontSize:11,background:'#f0fdfe',borderColor:'#a5f3fc'}}>
                       {buildScenarioPrompt(scenario, product)}
                     </pre>
                     <button className="stage-copy-btn" onClick={()=>{
@@ -1293,7 +1414,7 @@ Output the customer message only -- no explanation, no signal labels.`;
                 </div>
 
                 {/* Next step hint */}
-                <div style={{background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,padding:'10px 14px',fontSize:12,color:'#64748b',lineHeight:1.6}}>
+                <div style={{background:'#f0fdfe',border:'1px solid #a5f3fc',borderRadius:8,padding:'10px 14px',fontSize:12,color:'#155e75',lineHeight:1.6}}>
                   <strong>How to use:</strong> Paste the prompt above into your AI session →
                   the AI returns a realistic customer message →
                   paste that message into <button onClick={()=>setActiveStage("evaluate")} style={{background:'none',border:'none',cursor:'pointer',color:'#d97706',fontWeight:700,textDecoration:'underline',fontSize:12,padding:0}}>Step 4 (Evaluate)</button> and annotate signals → run the full 3-step flow.
@@ -1415,9 +1536,20 @@ Output the customer message only -- no explanation, no signal labels.`;
                       <div style={{display:'flex',alignItems:'center',gap:8}}>
                         {sv && <Ic n={sv.icon} size={16} color={stage.color} />}
                         <div className="stage-title" style={{color:stage.color}}>
-                          Step {stage.stepNum} — {stage.label}
-                          {stage.audienceExercise && (
-                            <span style={{marginLeft:10,fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:999,background:'#dcfce7',color:'#15803d'}}>Audience exercise</span>
+                          Step {stage.stepNum} —{' '}
+                          {showLabel ? (
+                            <>
+                              {stage.label}
+                              {stage.audienceExercise && (
+                                <span style={{marginLeft:10,fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:999,background:'#dcfce7',color:'#15803d'}}>Audience exercise</span>
+                              )}
+                            </>
+                          ) : (
+                            <button onClick={()=>setShowLabel(true)} style={{
+                              border:'1px dashed #cbd5e1',borderRadius:6,padding:'1px 10px',
+                              fontSize:12,fontWeight:600,cursor:'pointer',
+                              background:'#f1f5f9',color:'#94a3b8',letterSpacing:'0.04em',
+                            }}>reveal label</button>
                           )}
                         </div>
                       </div>
@@ -1438,12 +1570,28 @@ Output the customer message only -- no explanation, no signal labels.`;
                       {stage.steps && (
                         <div className="checklist">
                           <div className="checklist-label">Checklist</div>
-                          {stage.steps.map((step, i) => (
-                            <div key={i} className="checklist-item">
-                              <span className="checklist-dot" />
-                              <span>{step}</span>
-                            </div>
-                          ))}
+                          {stage.steps.map((step, i) => {
+                            const hintFn = STAGE_VISUAL_HINTS[stage.id] && STAGE_VISUAL_HINTS[stage.id][i];
+                            return (
+                              <div key={i} className="checklist-item">
+                                {hintFn ? (
+                                  <details className="hint-toggle" style={{width:'100%'}}>
+                                    <summary>
+                                      <span className="checklist-dot" />
+                                      <span>{step}</span>
+                                      <span className="hint-icon"><Ic n="ChevronDown" size={12} /></span>
+                                    </summary>
+                                    <div className="hint-visual">{hintFn()}</div>
+                                  </details>
+                                ) : (
+                                  <>
+                                    <span className="checklist-dot" />
+                                    <span>{step}</span>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
 
