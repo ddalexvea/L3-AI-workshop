@@ -1,0 +1,6 @@
+schema-version: v2.2
+dd-service: l3-ai-workshop
+team: tse-repro
+description: Reproduction test - file in subdirectory (docs/)
+lifecycle: development
+type: web
