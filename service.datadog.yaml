@@ -1,0 +1,22 @@
+schema-version: v2.2
+dd-service: l3-ai-workshop
+team: strikeforce
+description: Web application that provides medical coding workfile functionality for reviewing, coding, and managing medical claims
+application: Coding Workfile
+lifecycle: production
+type: web
+languages:
+- dotnet
+contacts:
+- type: slack
+  name: Support Slack
+  contact: https://www.slack.com/archives/strikeforce
+links:
+- name: Web.CodingWorkfile
+  type: repo
+  provider: github
+  url: https://github.com/Zotec-Product-Development/Web.CodingWorkfile
+tags:
+- language:csharp
+- framework:dotnet-framework-4.6.2
+- type:web-application
