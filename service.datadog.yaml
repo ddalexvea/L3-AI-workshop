@@ -30,7 +30,7 @@ datadog:
     - Zotec.CodingWorkfile.Web/**
     - Zotec.CodingWorkfile.Model/**
 spec:
-  lifecycle: production
+  lifecycle: staging
   tier: "1"
   languages:
   - dotnet
