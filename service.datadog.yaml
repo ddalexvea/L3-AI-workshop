@@ -1,0 +1,10 @@
+schema-version: v2.2
+dd-service: alex-branch-test
+team: tse-repro
+description: Reproduction test for ZD-2913782 - catalog branch behavior
+application: L3-AI-workshop
+lifecycle: experimental
+type: web
+tags:
+  - repro:zd-2913782
+  - branch-test:main
