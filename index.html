@@ -362,17 +362,6 @@
               <span style={{color:tc,fontWeight:700}}>{risk}</span>
             </div>
           ))}
-          <div style={{display:'flex',alignItems:'center',gap:5,marginTop:3}}>
-            <svg width={20} height={20} viewBox="0 0 44 44">
-              <circle cx={22} cy={22} r={19} fill="none" stroke="#ef4444" strokeWidth={2.5}/>
-              <circle cx={15} cy={17} r={2} fill="#ef4444"/>
-              <circle cx={29} cy={17} r={2} fill="#ef4444"/>
-              <line x1={12} y1={12} x2={18} y2={14} stroke="#ef4444" strokeWidth={2} strokeLinecap="round"/>
-              <line x1={26} y1={14} x2={32} y2={12} stroke="#ef4444" strokeWidth={2} strokeLinecap="round"/>
-              <path d="M 14 26 Q 22 20 30 26" fill="none" stroke="#ef4444" strokeWidth={2.5} strokeLinecap="round"/>
-            </svg>
-            <span style={{fontSize:9,color:'#b91c1c',fontWeight:600}}>Frustrated</span>
-          </div>
         </div>
       );
 
@@ -408,9 +397,9 @@
       );
 
       const steps = [
-        {n:4,label:'Evaluate', color:'#d97706',bg:'#fffbeb',border:'#fde68a',visual:'Risk table',    Preview:EvaluatePreview},
-        {n:5,label:'Draft',    color:'#15803d',bg:'#f0fdf4',border:'#86efac',visual:'Signal mapping', Preview:DraftPreview},
-        {n:6,label:'Criticize',color:'#6d28d9',bg:'#faf5ff',border:'#ddd6fe',visual:'Coverage check',Preview:CriticizePreview},
+        {n:4,label:'Evaluate', color:'#d97706',bg:'#fffbeb',border:'#fde68a',visual:'Risk table',     Preview:EvaluatePreview},
+        {n:5,label:'Draft',    color:'#15803d',bg:'#f0fdf4',border:'#86efac',visual:'Signal mapping',  Preview:DraftPreview},
+        {n:6,label:'Criticize',color:'#6d28d9',bg:'#faf5ff',border:'#ddd6fe',visual:'Coverage + Risk Δ',Preview:CriticizePreview},
       ];
 
       return (
@@ -616,8 +605,8 @@
       draft:    { color:'#15803d', icon:'PenLine',
         concept: 'Map each signal to a required response move. Order by priority, not by message order.',
         graphic: DraftVisual },
-      criticize:{ color:'#6d28d9', icon:'ShieldCheck',
-        concept: 'Signal coverage first, filler phrases second. The best edit closes the largest gap.',
+      criticize: { color:'#6d28d9', icon:'ShieldCheck',
+        concept: 'Signal coverage first, filler second, risk projection last. Does the draft move the customer from Frustrated to Concerned?',
         graphic: CriticizeVisual },
     };
 
@@ -703,7 +692,9 @@ OUTPUT:
 - Response draft (one paragraph per point)`,
         prompt: `CONTEXT:
 You are a Datadog TSE2 writing a customer-facing response on behalf of the support team.
-The annotated message and risk assessment from the previous steps are your context.
+The customer is reaching out via an async support ticket. Your team operates async-first;
+phone/video calls require TL approval. The annotated message and risk assessment from the
+previous steps are your context.
 
 INSTRUCTIONS:
 1. List the key points from the customer message that must be addressed, in priority order.
@@ -728,12 +719,13 @@ OUTPUT FORMAT:
       {
         id: "criticize", label: "Criticize", stepNum: 3,
         color: "#6d28d9", bg: "#faf5ff", border: "#ddd6fe",
-        goal: "Check signal coverage first — a draft that misses a signal is worse than one with filler phrases. Opening sentence must lead with empathy if Sentiment or Urgency is dominant. The single most impactful edit closes the largest signal gap.",
+        goal: "Check signal coverage first — a draft that misses a signal is worse than one with filler phrases. Opening sentence must lead with empathy if Sentiment or Urgency is dominant. The single most impactful edit closes the largest signal gap. End by projecting: does this draft move the customer from Frustrated to Concerned?",
         steps: [
           "Is every detected signal addressed in the draft?",
           "Does the opening sentence lead with empathy before technical content (if Sentiment or Urgency is dominant)?",
           "Are there filler phrases that should be replaced with direct language?",
           "What is the single most impactful edit — and is it a signal gap or a filler fix?",
+          "After applying the best edit: which signals are defused, which stay live, and does the projected risk level drop?",
         ],
         promptLight: `INSTRUCTIONS:
 Review the response draft above:
@@ -741,16 +733,19 @@ Review the response draft above:
 2. Scan for filler phrases and propose direct replacements for each one found.
 3. Evaluate the opening sentence: does it lead with empathy when Sentiment or Urgency is dominant?
 4. Propose the single most impactful edit.
+5. Project the outcome: after the best edit is applied, which signals are defused vs live, and does the projected risk level drop?
 
 REASONING:
 A draft that misses a signal is worse than one with filler phrases — check coverage first.
-The most impactful edit closes the largest signal gap, not just the most obvious wording issue.
+Structural signals (Escalation Signal, Urgency) stay live until the fix ships — do not mark them Defused.
+Only mark Defused if the draft contains a concrete action or explicit ownership, not just an acknowledgment.
 
 OUTPUT FORMAT:
 - Signal coverage (addressed / missing per signal)
 - Filler phrases (original → suggested replacement)
 - Opening sentence verdict
-- One concrete edit`,
+- One concrete edit
+- Risk projection: Before (signal states) → After (projected states) · projected risk level`,
         prompt: `CONTEXT:
 You are a Datadog TSE2 reviewing a response draft before sending.
 The draft above and the annotated customer message are your inputs.
@@ -760,22 +755,28 @@ INSTRUCTIONS:
 2. Scan for filler phrases ("as per", "please don't hesitate", "I hope this finds you well") and suggest direct replacements.
 3. Check the opening sentence: does it lead with empathy before technical content? If the dominant signal was Negative Sentiment or Urgency, it should.
 4. Propose the single most impactful edit to the draft.
+5. Project the outcome: for each detected signal, state whether the draft (with the best edit applied) defuses it, leaves it live, or risks re-triggering it. Assign a projected risk level after the draft is received.
 
 EXAMPLES:
 Signal gap: "Escalation Signal detected in annotation but no explicit acknowledgment of escalation path in draft."
 Filler phrase: "Please don't hesitate to reach out" -> "Reply here and I will get back to you within [time]."
 Opening sentence: "Opens with technical content -- should open with empathy given Negative Sentiment signal."
+Defused: "Business Impact -- draft names the on-call consequence and assigns a P1 owner."
+Live: "Escalation Signal -- acknowledged, but VP still waiting; defuses only when fix ships."
+Re-trigger risk: "'patience' implies the two-week wait was acceptable, re-triggering Unmet Expectation."
 
 REASONING:
 Before proposing any edit, check signal coverage first.
 A draft that misses a signal is worse than one with filler phrases.
+Structural signals (Escalation Signal, Urgency) stay live regardless of tone -- do not mark them Defused unless the underlying issue is resolved.
 The single most impactful edit is the one that closes the largest signal gap or removes the most damaging filler.
 
 OUTPUT FORMAT:
 - Signal coverage (addressed / missing per signal)
 - Filler phrases found (original -> suggested replacement)
 - Opening sentence verdict
-- One concrete edit`,
+- One concrete edit
+- Risk projection: Signal delta (Before | After | Reason) · projected risk level`,
       },
     ];
 
@@ -957,201 +958,77 @@ We need a concrete timeline for resolution today, or we will need to involve our
 
     /* ── Session routing prompts ────────────────────────── */
     const CANVAS_SESSION_ROUTING = `CONTEXT:
-You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses.
-The participant works through a 3-step workflow: Evaluate → Draft → Criticize.
+You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses. The participant works through a 3-step workflow: Evaluate → Draft → Criticize. Your role is to render each step's output as a Cursor canvas file. Do not narrate in chat — only write the canvas.
 
-STEP ROUTING:
-- Step 1 (Evaluate) → write a canvas file
-- Step 2 (Draft)    → reply in chat only (no canvas — output is prose)
-- Step 3 (Criticize) → write a canvas file
+INSTRUCTIONS:
+For every step prompt the participant sends, write a canvas file at:
+  ~/Desktop/workshop/l3-step-N.canvas.tsx  (N = 1, 2, or 3)
+In chat reply only with: "Canvas ready — open l3-step-N.canvas.tsx"
 
-For canvas steps: write the file at ~/Desktop/workshop/l3-step-N.canvas.tsx and reply only with:
-  "Canvas ready — open l3-step-N.canvas.tsx"
-For Step 2: reply with the full response draft in chat, no preamble.
+CANVAS LAYOUT PER STEP:
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-STEP 1 — EVALUATE canvas layout
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Step 1 — Evaluate:
+  1. Header row: H1 "Step 1 — Evaluate" + Pill (tone="deleted" active) showing HIGH / MEDIUM / LOW RISK, right-aligned with Spacer
+  2. Signal count strip: Grid columns=4, one Stat per signal type found (value=count, label=signal name, tone: danger for Escalation Signal + Business Impact, warning for Urgency, info for Unmet Expectation, neutral for Sentiment)
+  3. Divider
+  4. H2 "Signal breakdown" + Table — headers: Priority | Signal | Detected phrase — rowTone: danger for Escalation Signal and Business Impact, warning for Urgency, info for Unmet Expectation, neutral for Sentiment
+  5. Divider
+  6. Risk ring + dominant signal: Row containing (a) inline SVG donut ring — 72x72, r=28, stroke=theme token color for risk level, label inside; (b) Stack with H3 "Dominant signal" and Callout (tone matches risk) naming the signal and one-sentence reasoning
+  7. Stakeholder decision Card (collapsible): CardHeader text "Stakeholder involvement" + trailing Pill ("Required" tone=deleted active, or "Not required" tone=neutral); CardBody = Callout with the concrete action the TSE must take
+  8. Anti-anchor Callout (tone="neutral", title="Anti-anchor check"): ask whether first impression missed any signal
 
-1. Header row
-   H1 "Step 1 — Evaluate" + Spacer + Pill (tone matching risk: "deleted"=High, "warning"=Medium, "success"=Low, active) showing "HIGH RISK" / "MEDIUM RISK" / "LOW RISK"
+Step 2 — Draft:
+  1. Header: H1 "Step 2 — Draft" + risk Pill (carry from Step 1)
+  2. Signal-to-move Table — headers: Signal | Required move | Priority — rowTone matches signal tone
+  3. Tone approach Callout (tone="info", title="Tone approach"): state whether to lead with empathy or concrete timeline based on dominant signal
+  4. Response draft: one collapsible Card per paragraph — CardHeader = signal label, CardBody = draft text
+  5. Filler phrase table: headers: Avoid | Use instead — rowTone: danger on Avoid rows; max 4 rows
+  6. Commitment check Callout (tone="warning"): flag any vague commitments still in the draft ("soon", "ASAP", "we'll look into it")
 
-2. Signal + temperature strip  (Grid columns=7, gap=12)
-   • Stat — value=count, label="Escalation Signals", tone="danger"  (omit if 0)
-   • Stat — value=count, label="Business Impact", tone="danger"      (omit if 0)
-   • Stat — value=count, label="Urgency", tone="warning"             (omit if 0)
-   • Stat — value=count, label="Unmet Expectation", tone="info"      (omit if 0)
-   • Stat — value=count, label="Sentiment", tone="neutral"           (omit if 0)
-   • Stat — value=total, label="Total signals"
-   • Customer temperature face — inline SVG (60x60), drawn as a circle face:
-       Hot/Frustrated (Escalation Signal or Business Impact present):
-         stroke=theme.diff.stripRemoved, furrowed brows (two angled lines above eyes), frown path "M 14 26 Q 22 20 30 26"
-       Warm/Concerned (Urgency or Unmet Expectation, no escalation):
-         stroke=theme.accent.primary, no brow lines, flat mouth "M 14 24 L 30 24"
-       Cool/Neutral (Sentiment only, or no strong signal):
-         stroke=theme.diff.stripAdded, no brow lines, smile path "M 14 22 Q 22 28 30 22"
-     Below the SVG: Text size="small" tone="secondary" with "Frustrated" / "Concerned" / "Neutral"
-     Use useHostTheme() for all colors. No hardcoded hex.
+Step 3 — Criticize:
+  1. Header: H1 "Step 3 — Criticize"
+  2. Signal coverage Table — headers: Signal | Status | Note — rowTone: success=Addressed, warning=Partial, danger=Missing
+  3. Opening sentence Callout (tone="success"|"warning"|"danger", title="Opening sentence"): quote the opening sentence and rate it
+  4. Filler phrases Table — headers: Phrase | Why it fails | Replacement — rowTone: danger on all rows
+  5. Best edit: Grid columns=2 — left Callout (tone="danger", title="Remove") + right Callout (tone="success", title="Replace with")
+  6. Facilitator note Callout (tone="info", title="Best single edit"): the one edit that closes the largest signal gap
+  7. Divider
+  8. H2 "Risk projection — before → after" + Grid columns=2: left Card "Before" showing original signal states (all Active) + risk ring red + Frustrated face; right Card "After best edit" showing Defused/Live per signal + risk ring accent/green + Concerned face
+  9. Signal delta Table — headers: Signal | Before | After | Reason — rowTone: success=Defused, warning=Live, danger=Tone flag
+  10. Verdict Callout (tone="success"): projected risk level + one-sentence reasoning about what caused the drop
 
-3. Divider
-
-4. H2 "Signal breakdown" + Table
-   headers: ["#", "Signal", "Detected phrase"]
-   columnAlign: ["center", "left", "left"]
-   rowTone: danger=Escalation Signal/Business Impact, warning=Urgency, info=Unmet Expectation, neutral=Sentiment
-   Max 7 rows.
-
-5. Divider
-
-6. Risk ring + dominant signal (Row, gap=20, align="start")
-   Left: inline SVG ring (76x76, r=30, cx/cy=38):
-     Track circle: stroke=theme.stroke.tertiary, strokeWidth=7
-     Arc: stroke=theme.diff.stripRemoved (High) / theme.accent.primary (Medium) / theme.diff.stripAdded (Low)
-          pct=0.88 (High) / 0.55 (Medium) / 0.25 (Low), strokeLinecap="round", rotate(-90)
-     Label text inside: fontSize=11, fontWeight=700, fill=arcColor, text="High"/"Medium"/"Low"
-   Right: Stack — H3 "Dominant signal — [name]" + Callout (tone="danger"|"warning"|"neutral") with one-sentence reasoning
-
-7. Stakeholder Card (collapsible, defaultOpen)
-   CardHeader text "Stakeholder involvement" + trailing Pill: tone="deleted" active "Required", or tone="neutral" "Not required"
-   CardBody: Callout (tone="warning" if required, "neutral" if not) with the concrete action
-
-8. Anti-anchor Callout (tone="neutral", title="Anti-anchor check")
-   Ask whether first impression anchored on a weaker signal and missed the dominant one.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-STEP 2 — DRAFT (chat only, no canvas)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Output the full customer response as plain prose in chat.
-Structure:
-  - Signal-to-move mapping (one bullet per signal: Signal → Required move)
-  - Blank line
-  - Full response draft (no markdown headers inside the draft itself)
-  - Filler phrases to avoid (compact list, max 4)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-STEP 3 — CRITICIZE canvas layout
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. Header: H1 "Step 3 — Criticize"
-
-2. Signal coverage Table
-   headers: ["Signal", "Status", "Note"]
-   rowTone: success=Addressed, warning=Partial, danger=Missing
-
-3. Opening sentence Callout (tone="success"|"warning"|"danger", title="Opening sentence")
-   Quote the first sentence of the draft and rate it.
-
-4. Filler phrases Table (if any found)
-   headers: ["Phrase found", "Why it fails", "Replace with"]
-   rowTone: danger on all rows
-
-5. Best edit — Grid columns=2
-   Left Callout (tone="danger", title="Remove")
-   Right Callout (tone="success", title="Replace with")
-
-6. Facilitator note Callout (tone="info", title="Best single edit")
-   The one edit that closes the largest signal gap.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CANVAS RULES (all steps)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- Import only from cursor/canvas.
-- useHostTheme() for all colors. No hardcoded hex.
+CANVAS RULES (apply to all steps):
+- Import only from cursor/canvas. No external packages.
+- Use useHostTheme() for all colors. No hardcoded hex values.
 - No box-shadow, no gradients, no emoji as decoration.
-- Table rowTone: "success" | "danger" | "warning" | "info" | "neutral"
-- Pill tone: "neutral" | "added" | "deleted" | "renamed" | "success" | "warning" | "info"
-- No font sizes above 24px. Max 7 rows per table.`;
+- Table rowTone valid values: "success" | "danger" | "warning" | "info" | "neutral"
+- Pill tone valid values: "neutral" | "added" | "deleted" | "renamed" | "success" | "warning" | "info"
+- SVG ring: inline SVG arc only — stroke color from useHostTheme() (theme.text.danger / theme.text.warning / theme.text.success resolved at runtime). No chart library.
+- Max 7 rows per signal table. One clear takeaway at the bottom of every canvas.`
 
     const HTML_SESSION_ROUTING = `CONTEXT:
-You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses.
-The participant works through a 3-step workflow: Evaluate → Draft → Criticize.
+You are an AI assistant supporting a Datadog TSE L3 AI workshop on customer-facing responses. The participant is working through a 3-step response workflow (Evaluate → Draft → Criticize). Your role is to render each step's output as a self-contained HTML file — not to explain or narrate in chat.
 
-STEP ROUTING:
-- Step 1 (Evaluate)  → write a self-contained HTML file, then run: open ~/Desktop/workshop/l3-step-1.html — reply only with "Step 1 ready — check Chrome"
-- Step 2 (Draft)     → reply in chat only (no HTML file — output is prose)
-- Step 3 (Criticize) → write a self-contained HTML file, then run: open ~/Desktop/workshop/l3-step-3.html — reply only with "Step 3 ready — check Chrome"
+INSTRUCTIONS:
+For every response step prompt the participant sends, write a single self-contained HTML file to:
+ ~/Desktop/workshop/l3-step-N.html
+(Replace N with the step number: 4 for Evaluate, 5 for Draft, 6 for Criticize.) After writing, run: open ~/Desktop/workshop/l3-step-N.html
+In chat, reply only with: "Step N ready — check Chrome"
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-STEP 1 — EVALUATE HTML layout
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-White background, system-ui 13px, max-width 720px centered, padding 24px.
+Apply the following visual layout for each step:
+- Step 4 (Evaluate): Signal detection table (Signal | Detected | Phrase, left-border: red=High, amber=Med, gray=Low). Dominant signal in a colored box. Risk badge (green=Low, amber=Medium, red=High). Stakeholder decision at bottom.
+- Step 5 (Draft): Signal mapping table (Signal | Detected Phrase | Required Move, in priority order). Tone approach box. Response paragraphs — one per signal, bold signal label, concrete commitment, no filler phrases.
+- Step 6 (Criticize): Signal coverage table (Signal | Status, green=Addressed, red=Missing, amber=Partial). Filler phrases found (Original → Replacement). Opening sentence verdict. Single best edit in a diff box (red line → green line). Risk projection section: Before/After split (left=original signal states + Frustrated face, right=projected states after best edit + Concerned face). Delta table (Signal | Before | After | Reason, green=Defused, amber=Live, red=Tone flag). Projected risk level verdict.
 
-Header bar: h1 "Step 1 — Evaluate" (left) + risk badge (right, inline-block, bold 12px, border-radius 6px, padding 4px 12px):
-  High = background #fee2e2, color #b91c1c
-  Medium = background #fef3c7, color #b45309
-  Low = background #dcfce7, color #15803d
+REASONING:
+Before writing, identify which step the prompt belongs to and select the matching layout. Keep output focused: max one bold takeaway at the bottom of the page.
 
-Signal + temperature strip: CSS grid 7 columns, gap 12px, margin-bottom 20px.
-  Columns 1–6: stat card (border 1px solid #e2e8f0, border-radius 8px, padding 10px, text-align center):
-    Large bold number (20px) toned by signal type: Escalation=#ef4444, Business Impact=#ef4444, Urgency=#f59e0b, Unmet Expectation=#3b82f6, Total=#64748b
-    Small label below (10px, #94a3b8, uppercase, letter-spacing 0.06em)
-    Omit stat if count is 0.
-  Column 7: customer temperature face — inline SVG 60x60, circle face:
-    Hot/Frustrated (Escalation or Business Impact present):
-      stroke #ef4444, furrowed brows (two <line> elements angled), frown path "M 14 26 Q 22 20 30 26"
-    Warm/Concerned (Urgency or Unmet Expectation, no escalation):
-      stroke #f59e0b, no brow lines, flat mouth <line> y=24
-    Cool/Neutral (Sentiment only or no strong signals):
-      stroke #22c55e, no brow lines, smile path "M 14 22 Q 22 28 30 22"
-    Below SVG: small text 10px #94a3b8 "Frustrated" / "Concerned" / "Neutral"
-
-Divider: 1px solid #e2e8f0, margin 16px 0
-
-Signal breakdown table: full width, border-collapse collapse, border-radius 8px, overflow hidden, border 1px solid #e2e8f0.
-  Headers: # | Signal | Detected phrase — background #f8fafc, 11px bold uppercase.
-  Rows: left-border 4px colored per signal (Escalation=#ef4444, Business Impact=#ef4444, Urgency=#f59e0b, Unmet Expectation=#3b82f6, Sentiment=#94a3b8).
-  Max 7 rows.
-
-Divider
-
-Risk section: flex row, gap 20px.
-  Left: SVG ring 76x76 — track circle stroke #e2e8f0, arc stroke toned by risk (High=#ef4444, Medium=#f59e0b, Low=#22c55e), pct 0.88/0.55/0.25, label inside.
-  Right: div — bold "Dominant signal — [name]", then colored box (border-left 4px, background tint) with one-sentence reasoning.
-
-Stakeholder section: collapsible details/summary. Summary shows "Stakeholder involvement" + badge "Required" (#fee2e2/#b91c1c) or "Not required" (#f0fdf4/#15803d).
-  Body: amber box (background #fef3c7, border-left 4px #f59e0b) with concrete action the TSE must take.
-
-Anti-anchor note: gray box (background #f8fafc, border-left 4px #94a3b8, padding 10px 14px, font-size 12px).
-  Title bold "Anti-anchor check:" + text asking if first impression missed the dominant signal.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-STEP 2 — DRAFT (chat only, no HTML)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Output the full customer response as plain prose in chat.
-Structure:
-  - Signal-to-move mapping (one bullet per signal: Signal → Required move)
-  - Blank line
-  - Full response draft (no markdown headers inside the draft itself)
-  - Filler phrases to avoid (compact list, max 4)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-STEP 3 — CRITICIZE HTML layout
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Same base styles as Step 1.
-
-h1 "Step 3 — Criticize"
-
-Signal coverage table: headers Signal | Status | Note.
-  Row background tints: Addressed=#f0fdf4 (green left-border), Partial=#fef3c7 (amber), Missing=#fee2e2 (red).
-
-Opening sentence box: border-left 4px, toned green/amber/red. Title "Opening sentence" bold. Quote the first sentence, then one-line verdict.
-
-Filler phrases table (if any): headers Phrase found | Why it fails | Replace with. Red left-border on all rows.
-
-Best edit diff strip: two divs side by side (grid 2 cols, gap 8px).
-  Left: background #fee2e2, border-left 4px #ef4444, label "Remove" bold, original phrase.
-  Right: background #f0fdf4, border-left 4px #22c55e, label "Replace with" bold, replacement.
-
-Facilitator note: blue box (background #eff6ff, border-left 4px #3b82f6). Title "Best single edit" bold. One sentence naming the edit that closes the largest signal gap.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-HTML RULES (all steps)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- Single self-contained HTML file. No external CDN, no remote assets, no JS frameworks.
-- Inline CSS only (style attributes or a single <style> block).
-- Font: system-ui, 13px body.
-- No emoji as decoration. SVG faces are the only pictorial elements.
-- No box-shadow. Flat surfaces with border or left-border only.`;
+OUTPUT FORMAT:
+A single self-contained HTML file with inline CSS only. Must follow these rules:
+- No external dependencies (no CDN links, no script tags loading remote assets)
+- Colors: white background, dark text, green = #22c55e, red = #ef4444, amber = #f59e0b, gray = #94a3b8
+- Tables: alternating row shading (#f8fafc), colored left-border per row for status
+- Font: system-ui, 13px body, bold section headers`;
 
     /* ── Scenario Generator data ─────────────────────────── */
     const SCENARIOS = [
@@ -1203,63 +1080,40 @@ Output the customer message only -- no explanation, no signal labels.`;
     }
 
     function ScenarioGameVisual() {
+      const scenarios = [
+        {label:'Urgent issue',     signals:['Urgency','Business Impact','Request'],                          color:'#c2410c',bg:'#fff7ed'},
+        {label:'DSAT',             signals:['Sentiment','Unmet Expectation','Escalation Signal'],            color:'#b91c1c',bg:'#fff0f0'},
+        {label:'Call request',     signals:['Urgency','Context','Request'],                                  color:'#1d4ed8',bg:'#eff6ff'},
+        {label:'AI-written ticket',signals:['Context','Request'],                                            color:'#475569',bg:'#f8fafc'},
+      ];
       return (
         <div style={{display:'flex',gap:14,alignItems:'flex-start',padding:'10px 0',fontSize:12,userSelect:'none'}}>
-
-          {/* Left — pick + generate */}
-          <div style={{flex:1.1,display:'flex',flexDirection:'column',gap:6}}>
-            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#94a3b8',marginBottom:2}}>1 — pick a scenario</div>
-
-            <div style={{display:'flex',flexDirection:'column',gap:4}}>
-              <div style={{fontSize:9,color:'#94a3b8',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em'}}>Scenario type</div>
-              <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                {['Frustrated customer','API down','Missing metrics'].map((s,i)=>(
-                  <span key={i} style={{fontSize:10,padding:'2px 8px',borderRadius:999,
-                    background: i===0?'#d97706':'#f1f5f9',
-                    color: i===0?'#fff':'#64748b',
-                    border: i===0?'none':'1px solid #e2e8f0',
-                    fontWeight: i===0?700:400}}>{s}</span>
-                ))}
-              </div>
-            </div>
-
-            <div style={{display:'flex',flexDirection:'column',gap:4}}>
-              <div style={{fontSize:9,color:'#94a3b8',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em'}}>Product area</div>
-              <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                {['APM','Logs','Infrastructure'].map((p,i)=>(
-                  <span key={i} style={{fontSize:10,padding:'2px 8px',borderRadius:999,
-                    background: i===0?'#2563eb':'#f1f5f9',
-                    color: i===0?'#fff':'#64748b',
-                    border: i===0?'none':'1px solid #e2e8f0',
-                    fontWeight: i===0?700:400}}>{p}</span>
-                ))}
-              </div>
-            </div>
-
-            <div style={{padding:'5px 10px',borderRadius:6,background:'#1f2328',color:'#fff',fontSize:10,fontWeight:700,textAlign:'center',marginTop:2}}>
-              Copy prompt → paste into AI
-            </div>
-
-            <div style={{background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:6,padding:'6px 8px'}}>
-              <div style={{fontSize:9,fontWeight:700,color:'#94a3b8',marginBottom:4}}>AI returns realistic message</div>
-              {[85,70,92,60,78].map((w,i)=>(
-                <div key={i} style={{height:5,borderRadius:2,background:'#cbd5e1',width:`${w}%`,marginBottom:3}}/>
-              ))}
-            </div>
-          </div>
-
-          {/* Arrow */}
-          <div style={{display:'flex',alignItems:'center',justifyContent:'center',paddingTop:50,flexShrink:0}}>
-            <div style={{fontSize:16,color:'#64748b',fontWeight:700}}>→</div>
-          </div>
-
-          {/* Right — 3-step flow */}
+          {/* Left — raw scenario */}
           <div style={{flex:1,display:'flex',flexDirection:'column',gap:5}}>
-            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#94a3b8',marginBottom:2}}>2 — run the 3-step flow</div>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#94a3b8',marginBottom:2}}>ANY SCENARIO</div>
+            {scenarios.map((s,i)=>(
+              <div key={i} style={{padding:'5px 8px',borderRadius:6,background:s.bg,border:`1px solid ${s.color}20`}}>
+                <div style={{fontSize:11,fontWeight:600,color:s.color,marginBottom:3}}>{s.label}</div>
+                <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                  {s.signals.map((sig,j)=>(
+                    <span key={j} style={{fontSize:9,padding:'1px 5px',borderRadius:999,background:'#fff',border:`1px solid ${s.color}40`,color:s.color}}>{sig}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Arrow */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,paddingTop:28,minWidth:56}}>
+            <div style={{fontSize:14,color:'#0891b2',fontWeight:700}}>→</div>
+            <div style={{fontSize:9,fontWeight:700,color:'#0891b2',letterSpacing:'0.07em',textTransform:'uppercase',textAlign:'center',lineHeight:1.4}}>SCENARIO<br/>GAME</div>
+          </div>
+          {/* Right — same 3-step flow */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:5}}>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#94a3b8',marginBottom:2}}>SAME 3-STEP FLOW</div>
             {[
-              {n:1,label:'Evaluate', color:'#d97706',note:'Detect signals · Rate risk'},
-              {n:2,label:'Draft',    color:'#15803d',note:'Map moves · Write response'},
-              {n:3,label:'Criticize',color:'#6d28d9',note:'Coverage · Best edit'},
+              {n:4,label:'Evaluate', color:'#d97706',note:'Detect signals · Rate risk'},
+              {n:5,label:'Draft',    color:'#15803d',note:'Map moves · Write response'},
+              {n:6,label:'Criticize',color:'#6d28d9',note:'Coverage · Best edit · Risk Δ'},
             ].map((s,i)=>(
               <div key={i} style={{display:'flex',alignItems:'center',gap:7,padding:'5px 8px',borderRadius:6,background:'#f8fafc',border:'1px solid #e2e8f0'}}>
                 <div style={{width:18,height:18,borderRadius:'50%',background:s.color,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:9,fontWeight:700,flexShrink:0}}>{s.n}</div>
@@ -1269,9 +1123,8 @@ Output the customer message only -- no explanation, no signal labels.`;
                 </div>
               </div>
             ))}
-            <div style={{fontSize:9,color:'#94a3b8',fontStyle:'italic',marginTop:2}}>methodology is constant — only the context changes</div>
+            <div style={{fontSize:9,color:'#94a3b8',fontStyle:'italic',marginTop:2}}>methodology is constant · scenario changes</div>
           </div>
-
         </div>
       );
     }
@@ -1344,9 +1197,6 @@ Output the customer message only -- no explanation, no signal labels.`;
       }
 
       const totalTags = Object.values(tags).flat().length;
-      const textLines = lines.filter(l => l.type === 'text' || l.type === 'intro-code');
-      const taggedCount = textLines.filter(l => (tags[l.id] || []).length > 0).length;
-      const allLabeled = textLines.length > 0 && taggedCount === textLines.length;
       const activeStageObj = STAGES.find(s => s.id === activeStage) ?? null;
 
       return (
@@ -1400,7 +1250,7 @@ Output the customer message only -- no explanation, no signal labels.`;
               <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:20,padding:'40px 0 40px'}}>
                 <div style={{fontSize:22,fontWeight:700,color:'#1f2328',textAlign:'center'}}>L3 AI Response Workshop</div>
                 <div style={{fontSize:13,color:'#64748b',maxWidth:500,lineHeight:1.6,textAlign:'center'}}>
-                  A 3-step structured workflow for customer-facing responses — from signal annotation to a polished, empathy-first reply. Use the step prompts to drive your AI session.
+                  A 3-step structured workflow for customer-facing responses — from signal annotation to a polished, empathy-first reply. Each step ends with a risk projection so you always know whether the draft moves the customer from Frustrated to Concerned. Use the step prompts to drive your AI session.
                 </div>
                 <button
                   onClick={() => setActiveStage("prep")}
@@ -1640,27 +1490,15 @@ Output the customer message only -- no explanation, no signal labels.`;
                   </div>
                 )}
 
-                {/* ── Annotation progress gate (Evaluate only) ── */}
-                {activeStage === 'evaluate' && !allLabeled && paletteOpen && (
-                  <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 14px',background:'#fffbeb',border:'1px solid #fde68a',borderRadius:8,fontSize:12,color:'#92400e'}}>
-                    <Ic n="Tag" size={14} color="#d97706" />
-                    <span style={{fontWeight:600}}>{taggedCount} / {textLines.length} sentences labeled</span>
-                    <span style={{color:'#b45309'}}>— annotate all sentences to unlock Step 1</span>
-                    <div style={{flex:1,height:4,background:'#fde68a',borderRadius:999,marginLeft:8}}>
-                      <div style={{height:'100%',borderRadius:999,background:'#d97706',width:textLines.length > 0 ? Math.round(taggedCount/textLines.length*100)+'%' : '0%',transition:'width 0.3s'}} />
-                    </div>
-                  </div>
-                )}
-
                 {/* ── Stage content ── */}
-                {activeStageObj && (activeStage !== 'evaluate' || allLabeled) && (() => {
+                {activeStageObj && (() => {
                   const stage = activeStageObj;
                   const sv = STAGE_VISUALS[stage.id];
                   return (
                     <>
                       <hr className="divider" />
                       <div style={{display:'flex',alignItems:'center',gap:8}}>
-                        {sv && <Ic n={sv.icon} size={16} color="#2563eb" />}
+                        {sv && <Ic n={sv.icon} size={16} color={stage.color} />}
                         <div className="stage-title" style={{color:stage.color}}>
                           Step {stage.stepNum} — {stage.label}
                           {stage.audienceExercise && (
@@ -1671,10 +1509,10 @@ Output the customer message only -- no explanation, no signal labels.`;
 
                       {/* Visual hint */}
                       {sv && (
-                        <div style={{border:'1px solid #e2e8f0',borderRadius:8,background:'#f8fafc',padding:'10px 14px'}}>
+                        <div style={{border:`1px solid ${stage.border}`,borderRadius:8,background:stage.bg,padding:'10px 14px'}}>
                           <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
-                            <Ic n={sv.icon} size={12} color="#2563eb" />
-                            <span style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:'#2563eb'}}>Visual Hint</span>
+                            <Ic n={sv.icon} size={12} color={stage.color} />
+                            <span style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:stage.color}}>Visual Hint</span>
                             <span style={{fontSize:11,color:'#94a3b8',marginLeft:4}}>{sv.concept}</span>
                           </div>
                           <sv.graphic />
